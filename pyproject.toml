@@ -5,6 +5,7 @@ description = "Evidence-grounded open-source technology adoption due diligence"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "httpx>=0.28,<1.0",
     "langgraph>=1.0,<2.0",
     "pydantic>=2.10,<3.0",
 ]
@@ -24,4 +25,3 @@ packages = ["src/techlens"]
 [tool.pytest.ini_options]
 addopts = "-ra"
 testpaths = ["tests"]
-
