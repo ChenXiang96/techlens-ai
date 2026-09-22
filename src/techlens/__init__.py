@@ -1,4 +1,4 @@
-"""Public API for the TechLens deterministic Day-1 workflow."""
+"""Public API for TechLens human-supervised research collection."""
 
 from techlens.graph import build_graph
 from techlens.github_client import (
@@ -31,10 +31,29 @@ from techlens.models import (
     ResearchPlan,
     TeamProfile,
     TechnologyCandidate,
+    WebResearchTask,
 )
+from techlens.openai_planner import OpenAIResearchPlanner
+from techlens.planning import ResearchPlanner
+from techlens.research_models import (
+    CandidateEngineeringSignals, PlanReviewDecision, PlannerCandidate,
+    WebResearchTaskResult, WebSearchResult,
+)
+from techlens.search import SearchProvider
 from techlens.state import TechLensState
+from techlens.tavily_search import TavilySearchProvider
 
 __all__ = [
+    "CandidateEngineeringSignals",
+    "OpenAIResearchPlanner",
+    "PlanReviewDecision",
+    "PlannerCandidate",
+    "ResearchPlanner",
+    "SearchProvider",
+    "TavilySearchProvider",
+    "WebResearchTask",
+    "WebResearchTaskResult",
+    "WebSearchResult",
     "AssessmentReport",
     "AssessmentRequest",
     "BoundedCount",

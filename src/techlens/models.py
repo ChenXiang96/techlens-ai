@@ -8,9 +8,11 @@ from urllib.parse import urlsplit
 
 from pydantic import (
     BaseModel,
+    ConfigDict,
     Field,
     HttpUrl,
     StringConstraints,
+    field_serializer,
     field_validator,
     model_validator,
 )
@@ -27,6 +29,11 @@ class TechnologyCandidate(BaseModel):
     name: NonBlankString
     repository_url: HttpUrl
     homepage: HttpUrl | None = None
+
+    @field_serializer("repository_url", "homepage")
+    def serialize_url(self, value: HttpUrl | None) -> str | None:
+        # JsonPlus checkpoints cannot encode Pydantic HttpUrl directly.
+        return str(value) if value is not None else None
 
     @field_validator("repository_url", mode="before")
     @classmethod
@@ -116,16 +123,31 @@ class AssessmentRequest(BaseModel):
         return self
 
 
+class WebResearchTask(BaseModel):
+    """One bounded retrieval task with application-assigned identity."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    task_id: NonBlankString
+    candidate_id: NonBlankString | None
+    query: NonBlankString
+    purpose: NonBlankString
+
+
 class ResearchPlan(BaseModel):
-    """Deterministic description of research that a later version could run."""
+    """Validated executable plan; limits come only from the original request."""
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
     objective: NonBlankString
     research_questions: list[NonBlankString]
     engineering_checks: list[NonBlankString]
-    web_tasks: list[NonBlankString]
+    web_tasks: list[WebResearchTask]
     comparison_targets: list[NonBlankString]
     max_rounds: int = Field(gt=0)
     max_searches: int = Field(gt=0)
+    max_candidates: int = Field(ge=1, le=3)
+    max_run_cost_usd: Decimal = Field(ge=0)
 
 
 class AssessmentReport(BaseModel):
@@ -136,4 +158,3 @@ class AssessmentReport(BaseModel):
     summary: NonBlankString
     research_notes: list[NonBlankString]
     status: Literal["stub_complete"]
-

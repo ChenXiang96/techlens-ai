@@ -1,8 +1,26 @@
 from datetime import UTC, datetime
+import socket
 
 import pytest
 
 from techlens.models import TechnologyCandidate
+
+
+@pytest.fixture(autouse=True)
+def offline_environment(monkeypatch):
+    """Every normal test is offline and independent of real credentials."""
+    for name in ("OPENAI_API_KEY", "TAVILY_API_KEY", "GITHUB_TOKEN", "OPENAI_MODEL",
+                 "OPENAI_BASE_URL", "OPENAI_ORG_ID", "OPENAI_PROJECT_ID"):
+        monkeypatch.delenv(name, raising=False)
+    monkeypatch.setenv("LANGSMITH_TRACING", "false")
+    monkeypatch.setenv("LANGCHAIN_TRACING_V2", "false")
+
+    def block_network(*args, **kwargs):
+        raise AssertionError("Real network connections are forbidden in tests")
+
+    monkeypatch.setattr(socket.socket, "connect", block_network)
+    monkeypatch.setattr(socket.socket, "connect_ex", block_network)
+    monkeypatch.setattr(socket, "create_connection", block_network)
 
 
 @pytest.fixture
@@ -89,4 +107,3 @@ def github_payloads(repository_payload: dict[str, object]) -> dict[str, object]:
             ],
         },
     }
-
