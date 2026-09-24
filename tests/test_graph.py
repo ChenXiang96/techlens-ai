@@ -7,7 +7,10 @@ from langgraph.checkpoint.memory import InMemorySaver
 from langgraph.types import Command
 
 import techlens
+import techlens.graph as graph_module
 from fakes import FakeGitHubCollector, FakePlanner, FakeSearchProvider, make_request
+from techlens.evidence import EvidenceValidationError
+from techlens.evidence_models import GitHubEvidencePayload, WebEvidencePayload
 from techlens.github_client import GitHubCollectionError, collect_engineering_signals
 from techlens.models import AssessmentReport, AssessmentRequest, ResearchPlan
 from techlens.planning import PlanReviewError
@@ -29,7 +32,8 @@ def test_package_imports_and_graph_compiles():
     assert isinstance(graph.checkpointer, InMemorySaver)
     assert set(graph.get_graph().nodes) == {
         "__start__", "validate_request", "plan_research", "human_review", "collect_github",
-        "web_research", "research_complete", "generate_report_stub", "__end__",
+        "web_research", "research_complete", "normalize_evidence", "validate_evidence",
+        "generate_report_stub", "__end__",
     }
 
 
@@ -57,6 +61,12 @@ def test_interrupt_payload_and_approve_with_duplicate_names():
     assert isinstance(result["report"], AssessmentReport)
     assert [c.repository_url for c in github.calls] == [c.repository_url for c in request.candidates]
     assert [c.candidate_id for c in result["github_signals"]] == ["candidate-001", "candidate-002"]
+    assert result["evidence_validation"].total_records == 50
+    assert isinstance(result["evidence"][0].payload, GitHubEvidencePayload)
+    assert isinstance(result["evidence"][-1].payload, WebEvidencePayload)
+    restored = graph.get_state(CONFIG).values
+    assert isinstance(restored["evidence"][0].payload, GitHubEvidencePayload)
+    assert isinstance(restored["evidence"][-1].payload, WebEvidencePayload)
     assert graph.get_state(CONFIG).next == ()
     assert result["errors"] == []
     assert "UNTRUSTED-SNIPPET" not in result["report"].model_dump_json()
@@ -71,9 +81,12 @@ def test_exact_partial_order_and_join_before_report():
     names = [next(iter(event)) for event in resumed]
     assert names[0] == "human_review"
     assert set(names[1:3]) == {"collect_github", "web_research"}
-    assert names[3:] == ["research_complete", "generate_report_stub"]
+    assert names[3:] == ["research_complete", "normalize_evidence",
+                         "validate_evidence", "generate_report_stub"]
     for event in resumed[1:3]:
         assert "current_round" not in next(iter(event.values()))
+    assert set(resumed[4]["normalize_evidence"]) == {"evidence"}
+    assert set(resumed[5]["validate_evidence"]) == {"evidence_validation"}
 
 
 def test_valid_modified_plan_is_executed_without_replanning():
@@ -129,6 +142,7 @@ def test_reject_cleanly_terminates_without_research():
     assert search.calls == github.calls == []
     assert len(planner.calls) == 1
     assert result["report"].summary == "Research plan rejected. No external research performed."
+    assert "evidence" not in result and "evidence_validation" not in result
     assert graph.get_state(CONFIG).next == ()
 
 
@@ -242,3 +256,23 @@ def test_empty_resume_does_not_authorize_research():
     assert "__interrupt__" in paused
     assert graph.get_state(CONFIG).next == ("human_review",)
     assert len(planner.calls) == 1 and search.calls == github.calls == []
+
+
+def test_invalid_normalized_evidence_prevents_success_report(monkeypatch):
+    original_normalizer = graph_module.normalize_evidence
+
+    def bad_normalizer(state):
+        update = original_normalizer(state)
+        update["evidence"][0] = update["evidence"][0].model_copy(update={"title": "fabricated"})
+        return update
+
+    monkeypatch.setattr(graph_module, "normalize_evidence", bad_normalizer)
+    graph, planner, search, github = setup_graph()
+    graph.invoke({"request": make_request()}, CONFIG)
+    with pytest.raises(EvidenceValidationError):
+        graph.invoke(Command(resume={"action": "approve"}), CONFIG)
+    state = graph.get_state(CONFIG).values
+    assert state["current_round"] == 1
+    assert "evidence_validation" not in state and "report" not in state
+    assert len(planner.calls) == len(github.calls) == 1
+    assert len(search.calls) == 2

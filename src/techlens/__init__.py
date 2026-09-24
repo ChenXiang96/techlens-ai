@@ -1,6 +1,15 @@
 """Public API for TechLens human-supervised research collection."""
 
 from techlens.graph import build_graph
+from techlens.evidence import (
+    ClaimEvidenceContractError, EvidenceError, EvidenceNormalizationError,
+    EvidenceValidationError, normalize_records, validate_claim_evidence_contract,
+    validate_records,
+)
+from techlens.evidence_models import (
+    BoundedObservedValue, ClaimRecord, EvidenceRecord, EvidenceValidationSummary,
+    GitHubEvidencePayload, WebEvidencePayload,
+)
 from techlens.github_client import (
     GitHubAuthenticationError,
     GitHubCollectionError,
@@ -44,6 +53,19 @@ from techlens.state import TechLensState
 from techlens.tavily_search import TavilySearchProvider
 
 __all__ = [
+    "BoundedObservedValue",
+    "ClaimEvidenceContractError",
+    "ClaimRecord",
+    "EvidenceError",
+    "EvidenceNormalizationError",
+    "EvidenceRecord",
+    "EvidenceValidationError",
+    "EvidenceValidationSummary",
+    "GitHubEvidencePayload",
+    "WebEvidencePayload",
+    "normalize_records",
+    "validate_claim_evidence_contract",
+    "validate_records",
     "CandidateEngineeringSignals",
     "OpenAIResearchPlanner",
     "PlanReviewDecision",

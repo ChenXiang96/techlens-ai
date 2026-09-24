@@ -1,6 +1,6 @@
 # TechLens AI
 
-TechLens collects GitHub engineering signals and web source candidates for open-source technology due diligence. T-003 adds structured research planning and a real human review pause. The final report records collection status only; it does not evaluate technologies or recommend adoption.
+TechLens collects GitHub engineering signals and web source candidates for open-source technology due diligence. Human review precedes external research. T-004 converts collected observations into typed evidence records and validates their structure and provenance. The final report records collection and integrity status only; it does not evaluate technologies or recommend adoption.
 
 ## Setup
 
@@ -27,6 +27,10 @@ validate_request -> plan_research -> human_review (interrupt)
               collect_github + web_research    |
                          |                    |
                  research_complete            |
+                         |                    |
+                 normalize_evidence           |
+                         |                    |
+                  validate_evidence           |
                          +--------------------+
                                   |
                          generate_report_stub -> END
@@ -105,7 +109,17 @@ Tavily uses direct `httpx` with one POST per approved task and these fixed optio
 
 The body also includes the exact task query. Requests have a 10-second timeout, no retries, and no followed redirects. Results preserve task/query/candidate identity, title, URL spelling, snippet, score, optional publication-date text, provider, and optional credits used. A valid empty result list is a zero-hit search; malformed responses raise errors. Missing credits remain unknown, not zero.
 
-Web snippets are untrusted and are stored without being sent to an LLM. They are source candidates, not validated evidence.
+Web snippets are untrusted and are stored verbatim without being sent to an LLM. A zero-hit task produces no web evidence; duplicate URLs remain distinct records when retrieved under separate tasks.
+
+## Evidence integrity
+
+After both research branches complete, TechLens emits 24 fixed GitHub metric records per original candidate, then one record per web result in approved task and result order. IDs (`evidence-001`, `evidence-002`, …) are assigned locally in that order. GitHub URLs come from the original request. Web URLs retain provider spelling, and every record keeps its task or candidate provenance.
+
+GitHub bounded observations retain their observed count and `complete` or `truncated` status. Contributor shares describe only the observed contributor population. Repository practice records retain matched paths and tree-completeness information; a missing match in a truncated tree is marked unknown. Null license, release, and timestamp fields remain null.
+
+`EvidenceValidationSummary` certifies structural consistency, source provenance, candidate association, and preservation of collection completeness flags. It does not certify factual truth, source credibility, or sufficient support for a conclusion. The report includes deterministic record counts without copying web snippets. Rejected runs bypass evidence processing and have no evidence fields.
+
+`ClaimRecord` and `validate_claim_evidence_contract` define only the future claim-to-evidence reference rules. T-004 creates no claims and adds no claim state or claim interpretation.
 
 ## Bounds, errors, and limitations
 
@@ -120,4 +134,4 @@ Web snippets are untrusted and are stored without being sent to an LLM. They are
 
 Provider clients are caller-owned dependencies and must remain outside graph state/checkpoints. Tests inject `ResearchPlanner`, `SearchProvider`, and a GitHub collector callable directly into `build_graph`.
 
-No evidence interpretation, risk scoring, adoption recommendation, second round, database, frontend, or persistent checkpointer is implemented.
+No evidence interpretation, claim generation, risk scoring, adoption recommendation, second round, database, frontend, or persistent checkpointer is implemented.

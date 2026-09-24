@@ -6,6 +6,10 @@ from langchain_core.runnables import RunnableConfig
 from langgraph.types import interrupt
 from pydantic import ValidationError
 
+from techlens.evidence import (
+    EvidenceNormalizationError, EvidenceValidationError, normalize_records, validate_records,
+)
+from techlens.evidence_models import EvidenceRecord, EvidenceValidationSummary
 from techlens.github_models import EngineeringSignals
 from techlens.models import AssessmentReport, AssessmentRequest, ResearchPlan, TechnologyCandidate
 from techlens.planning import (
@@ -147,14 +151,53 @@ def research_complete(state: TechLensState) -> dict[str, object]:
     }
 
 
+def normalize_evidence(state: TechLensState) -> dict[str, list[EvidenceRecord]]:
+    if state.get("plan_status") not in {"approved", "modified"} or state.get("current_round") != 1:
+        raise EvidenceNormalizationError("Research must complete before evidence normalization")
+    return {"evidence": normalize_records(
+        state["request"], state["research_plan"],
+        state["github_signals"], state["web_research_results"],
+    )}
+
+
+def validate_evidence(state: TechLensState) -> dict[str, EvidenceValidationSummary]:
+    if state.get("plan_status") not in {"approved", "modified"} or state.get("current_round") != 1:
+        raise EvidenceValidationError("Research must complete before evidence validation")
+    if "evidence" not in state:
+        raise EvidenceValidationError("Evidence is missing")
+    return {"evidence_validation": validate_records(
+        state["request"], state["research_plan"], state["github_signals"],
+        state["web_research_results"], state["evidence"],
+    )}
+
+
 def generate_report_stub(state: TechLensState) -> dict[str, AssessmentReport]:
     request = state["request"]
     if state.get("plan_status") == "rejected":
         summary = "Research plan rejected. No external research performed."
         notes = ["No GitHub or web research calls were made."]
     elif state.get("current_round") == 1:
+        if "evidence" not in state or "evidence_validation" not in state:
+            raise EvidenceValidationError("Validated evidence is required for a completed report")
+        invalid_summary = False
+        try:
+            raw = state["evidence_validation"]
+            validation_summary = EvidenceValidationSummary.model_validate(
+                raw.model_dump() if isinstance(raw, EvidenceValidationSummary) else raw
+            )
+        except (ValidationError, TypeError, AttributeError):
+            invalid_summary = True
+        if invalid_summary:
+            raise EvidenceValidationError("Invalid evidence validation summary")
         summary = "Research collection completed. This report records collection status only."
-        notes = state["research_notes"]
+        notes = [
+            *state["research_notes"],
+            f"{validation_summary.total_records} evidence records normalized.",
+            f"{validation_summary.github_records} GitHub evidence records.",
+            f"{validation_summary.web_records} web evidence records.",
+            f"{validation_summary.incomplete_github_records} incomplete GitHub observations.",
+            "Evidence provenance and integrity validation completed; factual truth was not assessed.",
+        ]
     else:
         raise ValueError("Cannot report successful research before completion")
     return {"report": AssessmentReport(
