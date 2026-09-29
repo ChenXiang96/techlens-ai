@@ -205,5 +205,5 @@ def generate_report_stub(state: TechLensState) -> dict[str, AssessmentReport]:
         candidate_names=[candidate.name for candidate in request.candidates],
         summary=summary,
         research_notes=notes,
-        status="stub_complete",
+        status="rejected" if state.get("plan_status") == "rejected" else "completed",
     )}

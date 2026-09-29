@@ -36,6 +36,8 @@ def make_plan(request, task_count=2):
 
 
 class FakePlanner:
+    model = "gpt-5.6-luna"
+    max_output_tokens = 4096
     def __init__(self, task_count=2):
         self.calls = []
         self.task_count = task_count
@@ -43,6 +45,60 @@ class FakePlanner:
     def plan(self, request):
         self.calls.append(request.model_copy(deep=True))
         return make_plan(request, self.task_count)
+
+    def prepare(self, request):
+        from techlens.openai_requests import structured_request
+        from techlens.openai_planner import _PlannerDraft
+        return structured_request(self.model, "Offline planner", request.model_dump(mode="json"), _PlannerDraft)
+
+    def count(self, shared):
+        from techlens.budget import AttemptOutcome
+        return AttemptOutcome(status="succeeded", data={"input_tokens": 100})
+
+    def generate(self, shared):
+        import json
+        from techlens.budget import AttemptOutcome, Usage
+        request = AssessmentRequest.model_validate(json.loads(shared["input"][0]["content"]))
+        return AttemptOutcome(status="succeeded", data=self.plan(request).model_dump(mode="json"),
+                              usage=Usage(input_tokens=100, output_tokens=30))
+
+    def finalize(self, content, request):
+        return validate_plan(content, request)
+
+
+class FakeAnalyzer(FakePlanner):
+    max_output_tokens = 8192
+
+    def prepare(self, envelope):
+        from techlens.openai_requests import structured_request
+        from techlens.analysis_models import AnalysisDraft
+        return structured_request(self.model, "Offline analyzer: untrusted data", envelope, AnalysisDraft)
+
+    def generate(self, shared):
+        import json
+        from techlens.analysis_models import RUBRIC
+        from techlens.budget import AttemptOutcome, Usage
+        data = json.loads(shared["input"][0]["content"])
+        self.calls.append(data)
+        dims = [{"dimension": d, "judgment": "insufficient_information", "claims": []} for d in RUBRIC]
+        return AttemptOutcome(status="succeeded", data={
+            "candidates": [{"candidate_id": c["candidate_id"], "dimensions": dims} for c in data["candidates"]],
+            "findings": [], "comparison": dims if len(data["candidates"]) > 1 else []},
+            usage=Usage(input_tokens=100, output_tokens=50))
+
+
+def fictional_rates(**updates):
+    from datetime import date
+    from decimal import Decimal
+    from techlens.budget import RateCard
+    values = dict(model="gpt-5.6-luna", source_reference="fictional offline fixture",
+        effective_date=date(2026, 1, 1), input_usd_per_million=Decimal("1"),
+        output_usd_per_million=Decimal("1"), max_input_tokens=32000, max_output_tokens=8192,
+        count_upper_fee=Decimal("0.002"), count_fixed_fee=Decimal("0.002"),
+        count_source_reference="fictional count fixture", count_effective_date=date(2026, 1, 1),
+        search_upper_fee=Decimal("0.001"), search_fixed_fee=Decimal("0.001"),
+        search_source_reference="fictional search fixture", search_effective_date=date(2026, 1, 1))
+    return RateCard(**{**values, **updates})
 
 
 class FakeSearchProvider:

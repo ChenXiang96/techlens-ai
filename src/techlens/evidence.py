@@ -13,6 +13,7 @@ from techlens.github_models import BoundedCount, EngineeringSignals, GitHubRepos
 from techlens.models import AssessmentRequest, ResearchPlan
 from techlens.planning import PlannerError, candidate_catalog, validate_plan
 from techlens.research_models import CandidateEngineeringSignals, WebResearchTaskResult
+from techlens.collection_models import CollectionCoverage, check_coverage
 
 
 class EvidenceError(Exception):
@@ -86,6 +87,7 @@ def _checked_sources(
     github: Sequence[CandidateEngineeringSignals],
     web: Sequence[WebResearchTaskResult],
     error_type: type[EvidenceError],
+    coverage: CollectionCoverage | None = None,
 ) -> tuple[list[CandidateEngineeringSignals], list[WebResearchTaskResult]]:
     invalid = False
     try:
@@ -94,9 +96,18 @@ def _checked_sources(
         catalog = candidate_catalog(request)
         checked_github = [CandidateEngineeringSignals.model_validate(item.model_dump()) for item in github]
         checked_web = [WebResearchTaskResult.model_validate(item.model_dump()) for item in web]
-        if len(checked_github) != len(catalog) or len(checked_web) != len(plan.web_tasks):
-            raise ValueError("Collection coverage differs from the request or plan")
-        for entry, candidate, collected in zip(catalog, request.candidates, checked_github, strict=True):
+        if coverage is None:
+            if len(checked_github) != len(catalog) or len(checked_web) != len(plan.web_tasks):
+                raise ValueError("Collection coverage differs from the request or plan")
+            if [g.candidate_id for g in checked_github] != [c.candidate_id for c in catalog]:
+                raise ValueError("GitHub source order differs")
+            if [w.task for w in checked_web] != plan.web_tasks:
+                raise ValueError("Web source order differs")
+        else:
+            check_coverage(coverage, request, plan, checked_github, checked_web)
+        authority = {c.candidate_id: (c, candidate) for c, candidate in zip(catalog, request.candidates)}
+        for collected in checked_github:
+            entry, candidate = authority[collected.candidate_id]
             ref = GitHubRepositoryRef.from_candidate(candidate)
             repo = collected.engineering_signals.repository
             practices = collected.engineering_signals.repository_practices
@@ -111,10 +122,12 @@ def _checked_sources(
                    for indicator in (practices.ci, practices.tests,
                                      practices.security_policy, practices.dependency_automation)):
                 raise ValueError("Repository practice completeness differs from tree coverage")
-        for task, retrieved in zip(plan.web_tasks, checked_web, strict=True):
+        tasks = {t.task_id: t for t in plan.web_tasks}
+        for retrieved in checked_web:
+            task = tasks[retrieved.task.task_id]
             if retrieved.task != task:
                 raise ValueError("Web result does not match its approved task")
-    except (ValidationError, PlannerError, ValueError, TypeError, AttributeError):
+    except (ValidationError, PlannerError, ValueError, TypeError, AttributeError, KeyError):
         invalid = True
     if invalid:
         raise error_type("Collected research source integrity failed")
@@ -155,17 +168,19 @@ def normalize_records(
     plan: ResearchPlan,
     github: Sequence[CandidateEngineeringSignals],
     web: Sequence[WebResearchTaskResult],
+    coverage: CollectionCoverage | None = None,
 ) -> list[EvidenceRecord]:
     """Copy selected source observations without interpretation or deduplication."""
     checked_github, checked_web = _checked_sources(
-        request, plan, github, web, EvidenceNormalizationError,
+        request, plan, github, web, EvidenceNormalizationError, coverage,
     )
     records: list[EvidenceRecord] = []
     invalid = False
     try:
-        for entry, candidate, collected in zip(
-            candidate_catalog(request), request.candidates, checked_github, strict=True,
-        ):
+        authority = {entry.candidate_id: (entry, candidate) for entry, candidate in
+                     zip(candidate_catalog(request), request.candidates)}
+        for collected in checked_github:
+            entry, candidate = authority[collected.candidate_id]
             for spec in GITHUB_METRICS:
                 records.append(EvidenceRecord(
                     evidence_id=f"evidence-{len(records) + 1:03d}",
@@ -196,7 +211,7 @@ def normalize_records(
         invalid = True
     if invalid:
         raise EvidenceNormalizationError("Evidence normalization failed")
-    expected = 24 * len(request.candidates) + sum(len(item.results) for item in checked_web)
+    expected = 24 * len(checked_github) + sum(len(item.results) for item in checked_web)
     if len(GITHUB_METRICS) != 24 or len(records) != expected:
         raise EvidenceNormalizationError("Evidence coverage count is incomplete")
     return records
@@ -265,10 +280,11 @@ def validate_records(
     github: Sequence[CandidateEngineeringSignals],
     web: Sequence[WebResearchTaskResult],
     evidence: Sequence[EvidenceRecord],
+    coverage: CollectionCoverage | None = None,
 ) -> EvidenceValidationSummary:
     """Inspect each supplied record against its original source, without renormalizing."""
     checked_github, checked_web = _checked_sources(
-        request, plan, github, web, EvidenceValidationError,
+        request, plan, github, web, EvidenceValidationError, coverage,
     )
     invalid = False
     try:
@@ -279,7 +295,7 @@ def validate_records(
         invalid = True
     if invalid:
         raise EvidenceValidationError("Malformed evidence record")
-    expected_github = 24 * len(request.candidates)
+    expected_github = 24 * len(checked_github)
     expected_web = sum(len(item.results) for item in checked_web)
     if len(GITHUB_METRICS) != 24 or len(records) != expected_github + expected_web:
         raise EvidenceValidationError("Evidence source coverage count differs")
@@ -291,9 +307,10 @@ def validate_records(
         raise EvidenceValidationError("Evidence IDs or candidate associations are invalid")
 
     position = 0
-    for entry, candidate, collected in zip(
-        candidate_catalog(request), request.candidates, checked_github, strict=True,
-    ):
+    authority = {entry.candidate_id: (entry, candidate) for entry, candidate in
+                 zip(candidate_catalog(request), request.candidates)}
+    for collected in checked_github:
+        entry, candidate = authority[collected.candidate_id]
         for spec in GITHUB_METRICS:
             _validate_github_record(
                 records[position], spec, entry.candidate_id,

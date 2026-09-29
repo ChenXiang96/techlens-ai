@@ -150,11 +150,28 @@ class ResearchPlan(BaseModel):
     max_run_cost_usd: Decimal = Field(ge=0)
 
 
+from techlens.report_models import ReportSection, ReportClaim, SourceReference, RunMetrics
+from techlens.analysis_models import CandidateAnalysis, ComparisonAnalysis
+from techlens.risk_models import RiskFlag
+
+
 class AssessmentReport(BaseModel):
-    """Typed Day-1 result that explicitly contains only stub findings."""
+    """Typed deterministic presentation of cited analysis and limitations."""
+
+    model_config = ConfigDict(extra="forbid")
 
     assessment_id: NonBlankString
     candidate_names: list[NonBlankString]
     summary: NonBlankString
     research_notes: list[NonBlankString]
-    status: Literal["stub_complete"]
+    status: Literal["completed", "partial", "rejected", "failed"]
+    candidate_ids: list[str] = Field(default_factory=list)
+    sections: list[ReportSection] = Field(default_factory=list)
+    claims: list[ReportClaim] = Field(default_factory=list)
+    sources: list[SourceReference] = Field(default_factory=list)
+    risk_flags: list[RiskFlag] = Field(default_factory=list)
+    analyses: list[CandidateAnalysis] = Field(default_factory=list)
+    comparison: ComparisonAnalysis | None = None
+    metrics: RunMetrics | None = None
+    team_profile: TeamProfile | None = None
+    priorities: list[NonBlankString] = Field(default_factory=list)

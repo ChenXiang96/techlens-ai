@@ -15,6 +15,7 @@ from techlens.search import (
     SearchRateLimitError,
     SearchResponseError,
     SearchTransportError,
+    SearchServerError,
 )
 
 TAVILY_SEARCH_URL = "https://api.tavily.com/search"
@@ -69,6 +70,8 @@ class TavilySearchProvider:
                 failure = SearchRateLimitError("Tavily rate limit exceeded")
             elif status in {432, 433}:
                 failure = SearchQuotaError("Tavily quota or plan limit exceeded")
+            elif status >= 500:
+                failure = SearchServerError("Tavily server failure")
             elif status != 200:
                 failure = SearchResponseError("Unexpected Tavily HTTP status")
             else:

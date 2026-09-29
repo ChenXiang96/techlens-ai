@@ -1,137 +1,83 @@
 # TechLens AI
 
-TechLens collects GitHub engineering signals and web source candidates for open-source technology due diligence. Human review precedes external research. T-004 converts collected observations into typed evidence records and validates their structure and provenance. The final report records collection and integrity status only; it does not evaluate technologies or recommend adoption.
+TechLens assesses one to three original GitHub-hosted technologies for one shared team context. T-005 adds deterministic risk observations, structured adoption analysis, citation checks, a typed 13-section report, and per-run budget admission.
 
-## Setup
+Evidence integrity, citation integrity, and semantic support are different. This pipeline validates the first two. A cited statement is not automatically true, credible, or semantically supported.
 
-Python 3.11+ and [uv](https://docs.astral.sh/uv/) are required.
+## Local verification
+
+Python 3.11+ and uv are required. Existing dependencies remain unchanged.
 
 ```console
-uv sync
-uv run pytest
+uv run --frozen --offline --no-sync pytest
+git diff --check
 ```
 
-All automated tests block real socket connections, clear provider credentials from the test environment, and use fakes or `httpx.MockTransport`. No real API key is needed for tests.
+Tests remove provider credentials, block real socket connections, and use fake adapters or httpx MockTransport. Fictional rates occur only in test fixtures. No live provider verification was performed for T-005.
 
-For manual production use, supply `OPENAI_API_KEY` and `TAVILY_API_KEY` through your process environment. `GITHUB_TOKEN` is optional for public repositories. Do not paste credentials into code, checkpoints, review payloads, or command history. `OPENAI_MODEL` overrides the default `gpt-5.6-luna`; there is no local model-price registry.
-
-## Start, review, and resume
-
-The ordering is fixed:
+## Workflow
 
 ```text
-validate_request -> plan_research -> human_review (interrupt)
-                                      |
-                  approve / modify ---+--- reject
-                         |                    |
-              collect_github + web_research    |
-                         |                    |
-                 research_complete            |
-                         |                    |
-                 normalize_evidence           |
-                         |                    |
-                  validate_evidence           |
-                         +--------------------+
-                                  |
-                         generate_report_stub -> END
+validate_request / initialize ledger
+  -> planner [reserve count -> count -> reserve generation -> generation]
+  -> human_review (interrupt)
+       reject -> report -> validate / finalize metrics -> END
+       approve or valid modify
+         -> GitHub collection + bounded web collection
+         -> terminal-outcome join (current_round = 1)
+         -> normalize_evidence -> validate_evidence
+         -> deterministic risk rules -> bounded analysis projection
+         -> analyzer [reserve count -> count -> reserve generation -> generation]
+         -> validate claims / assemble comparison
+         -> report -> independently validate / finalize metrics -> END
 ```
 
-GitHub and Tavily execute only after `approve` or a valid `modify`. The OpenAI planner executes before the interrupt because its proposed plan is what the human reviews.
+Use `build_graph(planner=..., search_provider=..., analyzer=..., rates=...)`. The production adapters are `OpenAIResearchPlanner`, `OpenAIAdoptionAnalyzer`, and `TavilySearchProvider`. They read `OPENAI_API_KEY`, `OPENAI_MODEL` (default `gpt-5.6-luna`), and `TAVILY_API_KEY`; GitHub uses optional `GITHUB_TOKEN`. Clients are caller-owned and never checkpointed.
 
-In a single Python session, start an assessment:
+Start with `graph.invoke({"request": request}, config)`, where config contains a stable, nonblank `configurable.thread_id`. Inspect the returned `__interrupt__` plan. Resume the same runner with `Command(resume={"action": "approve"})`, `reject`, or `modify` plus a valid `modified_plan`. No GitHub or Tavily call precedes approval. Invalid review input never authorizes collection.
 
-```python
-import json
-from langgraph.checkpoint.memory import InMemorySaver
-from langgraph.types import Command
-from techlens import (
-    AssessmentRequest, OpenAIResearchPlanner, ResearchConstraints,
-    TavilySearchProvider, TeamProfile, TechnologyCandidate, build_graph,
-)
+Candidate IDs, web task IDs, comparison targets, repository mappings, and limits remain application-controlled. Duplicate display names remain valid. All GitHub selection uses the original candidate repository. Each branch checkpoints individual operation outcomes and the parent explicitly joins both branches. Only the join advances the research round. There is no second research round.
 
-request = AssessmentRequest(
-    assessment_id="langgraph-review-001",
-    candidates=[TechnologyCandidate(
-        name="LangGraph",
-        repository_url="https://github.com/langchain-ai/langgraph",
-    )],
-    team_profile=TeamProfile(primary_languages=["Python"]),
-    constraints=ResearchConstraints(max_candidates=1, max_web_searches=2),
-)
-planner = OpenAIResearchPlanner()
-search = TavilySearchProvider()
-saver = InMemorySaver()
-graph = build_graph(planner=planner, search_provider=search, checkpointer=saver)
-config = {"configurable": {"thread_id": "langgraph-review-001"}}
-paused = graph.invoke({"request": request}, config)
-review = paused["__interrupt__"][0].value
-print(json.dumps(review, indent=2))
-```
+## Paid-call admission
 
-Inspect the actual plan before executing either of the following resume examples. Keep the same graph, saver, providers, and `thread_id` alive. A different assessment needs a different thread ID.
+No production rate card is bundled. With `rates=None`, the graph returns a truthful partial result before provider transport. Direct `OpenAIResearchPlanner.plan()` is blocked; dispatch through the budgeted graph.
 
-To approve the reviewed plan:
+A caller-supplied trusted `RateCard` must identify the model, USD units, source reference, effective date, and applicable upper token rates, including relevant billing premiums. It also requires an independently justified token-count per-call upper fee, source and date, or an authoritative zero-fee basis. Token-count pricing is never inferred from generation token rates. Unknown preflight pricing blocks the count request itself. Search pricing likewise requires an explicit per-attempt upper fee and its source/date; no free credits are presumed.
 
-```python
-result = graph.invoke(Command(resume={"action": "approve"}), config)
-print(result["report"].model_dump(mode="json"))
-assert result["current_round"] == 1
-planner.close()
-search.close()
-```
+Each count call has its own operation, attempt ID and committed reservation. Its normalized `VerifiedInputCount` binds the model and canonical digest of the complete shared model/instructions/input/strict schema/settings. Counting and generation use identical token-relevant request JSON. Generation additionally sets its output cap and `store=False`. Input size is bounded before counting; provider counts include structured input overhead. Unknown/unprovable bounds block dispatch.
 
-Alternatively, reject the pending plan with `Command(resume={"action": "reject"})`. The graph completes with a rejected stub report, zero GitHub/Tavily calls, and `current_round == 0`.
+The Decimal ledger enforces settled estimated cost + unresolved reservations + new reservation <= the immutable request ceiling (default USD 0.15). USD 0.40 is not an automatic fallback. Failed or interrupted calls without trustworthy billing retain their reservations. A successful count may remain billing-unknown while its verified count is usable. Reconciliation is idempotent. Reported token or cost overruns remain visible and block later paid calls. Pricing protection depends on the configured upper rates being correct; it is not invoice reconciliation.
 
-To modify, edit a copy of `review["research_plan"]` and submit `{"action": "modify", "modified_plan": edited_plan}` through `Command(resume=...)`. Preserve the four execution limits and canonical comparison targets. Task IDs must be `web-001`, `web-002`, etc., in submitted order; arbitrary IDs fail validation. Invalid decisions raise `PlanReviewError` and do not authorize research. There is no automatic failed-review recovery loop.
+Planner and analyzer each allow one logical generation request, at most two separately reserved attempts, and one count preflight with no automatic preflight retry. An unchanged generation retry reuses the verified count. Web tasks allow at most two attempts each; every attempt consumes the original run-wide max_web_searches allowance. SDK retries remain disabled. Only classified transient transport, clear rate-limit, and server failures can retry. Authentication, quota, refusal, invalid output, and citation/integrity failures cannot. Timeouts remain explicit; backoff is bounded.
 
-The interrupt payload includes a candidate catalog. IDs are assigned from original request order (`candidate-001`, `candidate-002`, `candidate-003`). Duplicate display names are valid. Web tasks and comparison targets reference IDs; `candidate_id=None` denotes cross-candidate research. A human modification may change a task's association to another existing ID but cannot alter the ID-to-repository mapping.
+The CAD 10 project budget and remaining historical Day 03-05 cash allowance are manual concerns, not tracked by this per-run ledger.
 
-## Collection contracts
+## Replay and checkpoint limits
 
-The planner uses the OpenAI Responses API with Pydantic Structured Outputs, a 30-second timeout, at most 4,096 output tokens, `max_retries=0`, and `store=False`. It has no tools. Request content is treated as data. Application code assigns task IDs and copies execution limits. It revalidates the plan after planning, review, and before research.
+Retain the returned runner, its process-local `AttemptExecutor`, and its `InMemorySaver`. One invocation per run is allowed; different runs have separate ledgers. Historical or externally modified checkpoint execution is rejected by the retained runner.
 
-GitHub collection reuses T-002 `collect_engineering_signals(original_candidate)`. Results retain candidate ID, display name, original URL, and typed `EngineeringSignals`. Repository selection always comes from the original request. T-002's maximum remains 15 HTTP requests per candidate (45 for three candidates), with no retries. `BoundedCount(completeness="truncated")` is a lower bound, not an exact count. Missing practices in a truncated tree remain unknown.
+A new admission alone creates a READY dispatch slot. Idempotent admission cannot recreate it. Every dispatch verifies an actual committed matching reservation after a synchronous checkpoint barrier. READY is claimed atomically once; completed normalized outcomes are cached before graph reconciliation. Resume reapplies cached outcomes without transport. An in-flight operation suspends competing execution. Missing or ambiguous slots retain liability and cannot authorize replay.
 
-Tavily uses direct `httpx` with one POST per approved task and these fixed options:
+A fresh executor restoring any existing run fails closed for new dispatch slots, including snapshots that precede a reservation: it cannot establish whether later calls are missing from that snapshot. This is same-process protection, not durable recovery or exactly-once billing across process crashes. Process loss also loses the in-memory saver. A restored ledger retains known outstanding reservations, but lost history cannot be reconstructed or safely reset automatically.
 
-```json
-{
-  "search_depth": "basic",
-  "topic": "general",
-  "max_results": 3,
-  "include_answer": false,
-  "include_raw_content": false,
-  "include_images": false,
-  "auto_parameters": false,
-  "include_usage": true
-}
-```
+## Evidence, risks, and analysis
 
-The body also includes the exact task query. Requests have a 10-second timeout, no retries, and no followed redirects. Results preserve task/query/candidate identity, title, URL spelling, snippet, score, optional publication-date text, provider, and optional credits used. A valid empty result list is a zero-hit search; malformed responses raise errors. Missing credits remain unknown, not zero.
+The T-004 strict source contract remains when coverage is omitted. Explicit partial coverage requires one ordered terminal outcome per original GitHub candidate and approved web task: succeeded, failed, skipped_budget, or skipped_limit. Successful zero-hit search is distinct from failure. Failed collection creates no synthetic signals or evidence.
 
-Web snippets are untrusted and are stored verbatim without being sent to an LLM. A zero-hit task produces no web evidence; duplicate URLs remain distinct records when retrieved under separate tasks.
+Normalization keeps the unchanged 24-item GitHub registry per successful candidate plus one evidence record per successful web result. Evidence IDs remain canonical in original candidate/metric/task/result order. Bounded counts retain lower-bound semantics. All four practice indicators must agree with tree completeness. Null license/release observations and duplicate web URLs are preserved.
 
-## Evidence integrity
+Versioned pure rules flag recorded archive state, undetected license, stale release, low complete commit activity, complete-population concentration, and recognized-path gaps. Defaults are 365 days, fewer than 5 commits in 90 days, and top-contributor share >= 0.80. These are product heuristics. Unknown and truncated data are not reassuring negatives. Only a known repository-unavailable collection outcome triggers the access observation; authentication, rate-limit, timeout, and other collection failures keep their original categories and make access not evaluable. Issue-resolution health remains not evaluable from collected counts.
 
-After both research branches complete, TechLens emits 24 fixed GitHub metric records per original candidate, then one record per web result in approved task and result order. IDs (`evidence-001`, `evidence-002`, …) are assigned locally in that order. GitHub URLs come from the original request. Web URLs retain provider spelling, and every record keeps its task or candidate provenance.
+One bounded structured analyzer request covers the original candidate roster and six shared dimensions: maintenance, technical stack, operations, maturity, risk tolerance, and ecosystem fit. Missing team fields remain unknown. The deterministic projection preserves stored evidence, limits web snippets to 1,200 characters and at most 24 web records, omits oversized records, and records omissions/excerpts. Only eligible evidence IDs are exposed as citation metadata. Retrieved text is untrusted data; the analyzer has no tools or provider authority.
 
-GitHub bounded observations retain their observed count and `complete` or `truncated` status. Contributor shares describe only the observed contributor population. Repository practice records retain matched paths and tree-completeness information; a missing match in a truncated tree is marked unknown. Null license, release, and timestamp fields remain null.
+Application code assigns claim IDs after parsing and reuses the T-004 reference validator. Comparison claims require candidate-assigned evidence for every named candidate. Invalid drafts are discarded entirely without an LLM repair call. There is no total score or forced winner. A single candidate has comparison marked not applicable.
 
-`EvidenceValidationSummary` certifies structural consistency, source provenance, candidate association, and preservation of collection completeness flags. It does not certify factual truth, source credibility, or sufficient support for a conclusion. The report includes deterministic record counts without copying web snippets. Rejected runs bypass evidence processing and have no evidence fields.
+## Report and metrics
 
-`ClaimRecord` and `validate_claim_evidence_contract` define only the future claim-to-evidence reference rules. T-004 creates no claims and adds no claim state or claim interpretation.
+The typed report preserves all 13 sections, with explicit insufficient-information content when needed. It copies supplied team context, resolves URLs from evidence, and references validated claims and deterministic flags. Assembly makes no additional LLM call. Independent validation rechecks evidence provenance, citations, candidate/rubric coverage, flags, limitations, report text ownership and measured accounting.
 
-## Bounds, errors, and limitations
+Statuses distinguish completed, partial, rejected, and failed. Expected source/budget/analysis failures produce visible partial results; evidence integrity failures block analysis and produce a failed path. Completed means the pipeline completed, not that every unknown was resolved.
 
-- One planner request per normal assessment; zero additional planner requests on normal review resume.
-- At most `max_web_searches` Tavily calls and three results per call; defaults allow eight calls and 24 results.
-- One research round. Only the successful two-branch join sets `current_round=1`.
-- `max_run_cost_usd` is preserved unchanged in the request and plan. T-003 does not estimate, account for, or enforce dollar expenditure; that belongs to the later budget task.
-- Providers raise typed, sanitized errors outside active exception handlers. No authenticated exception is attached as their context, cause, or an exception attribute. Application code does not log or serialize request headers or raw responses.
-- A failed branch prevents the success join/report. The other branch may already have made requests; no partial-failure recovery or retry is implemented.
-- The in-memory saver is process-local. Restarting loses the paused run. Arbitrary replay, resubmission, or restarting an assessment can repeat calls; use only the documented start/review/resume flow.
-- Candidate IDs are assessment-local and depend on original request order. Free-text planning quality still requires human review; structured validation does not prove factual accuracy.
+Metrics include start/end times and elapsed wall time including human-review wait, admitted provider attempts and ambiguous attempts, supplied token/credit usage, measured GitHub requests, evidence/claim/round counts, settled estimates and unresolved reservations. Planner, analyzer, LLM, count, and search attempt totals count every admitted ledger record. Admission alone does not prove that transport began. `ambiguous_attempts` counts records without a settled provider outcome, including reservations interrupted before dispatch; `outstanding_reservations_usd` retains their liability. Failed GitHub request totals are unknown because the unchanged T-002 wrapper exposes its measured count only on success.
 
-Provider clients are caller-owned dependencies and must remain outside graph state/checkpoints. Tests inject `ResearchPlanner`, `SearchProvider`, and a GitHub collector callable directly into `build_graph`.
-
-No evidence interpretation, claim generation, risk scoring, adoption recommendation, second round, database, frontend, or persistent checkpointer is implemented.
+T-006 semantic evaluation and security measurement, automatic research sufficiency loops, source credibility scores, aggregate adoption scoring, RAG, UI, databases and persistent recovery remain outside this implementation.

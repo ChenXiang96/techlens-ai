@@ -51,8 +51,18 @@ from techlens.research_models import (
 from techlens.search import SearchProvider
 from techlens.state import TechLensState
 from techlens.tavily_search import TavilySearchProvider
+from techlens.openai_analyzer import OpenAIAdoptionAnalyzer
+from techlens.analysis import AdoptionAnalyzer
+from techlens.budget import RateCard, BudgetLedger, VerifiedInputCount
+from techlens.execution import AttemptExecutor
+from techlens.collection_models import CollectionCoverage, CollectionOutcome
+from techlens.risk_models import RiskRuleConfig, RiskEvaluation, RiskFlag
+from techlens.report_models import RunMetrics
 
 __all__ = [
+    "OpenAIAdoptionAnalyzer", "AdoptionAnalyzer", "RateCard", "BudgetLedger", "VerifiedInputCount",
+    "AttemptExecutor", "CollectionCoverage", "CollectionOutcome", "RiskRuleConfig", "RiskEvaluation",
+    "RiskFlag", "RunMetrics",
     "BoundedObservedValue",
     "ClaimEvidenceContractError",
     "ClaimRecord",

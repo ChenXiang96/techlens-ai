@@ -36,5 +36,9 @@ class SearchResponseError(SearchError):
     pass
 
 
+class SearchServerError(SearchResponseError):
+    pass
+
+
 class SearchProvider(Protocol):
     def search(self, task: WebResearchTask) -> WebResearchTaskResult: ...

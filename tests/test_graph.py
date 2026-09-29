@@ -8,7 +8,8 @@ from langgraph.types import Command
 
 import techlens
 import techlens.graph as graph_module
-from fakes import FakeGitHubCollector, FakePlanner, FakeSearchProvider, make_request
+from fakes import FakeGitHubCollector, FakePlanner, FakeSearchProvider, FakeAnalyzer, fictional_rates, make_request
+from techlens.execution import ExecutionBlocked
 from techlens.evidence import EvidenceValidationError
 from techlens.evidence_models import GitHubEvidencePayload, WebEvidencePayload
 from techlens.github_client import GitHubCollectionError, collect_engineering_signals
@@ -19,9 +20,13 @@ from techlens.search import SearchResponseError
 CONFIG = {"configurable": {"thread_id": "assessment-thread-003"}}
 
 
+def build_test_graph(**kwargs):
+    return techlens.build_graph(rates=fictional_rates(), analyzer=FakeAnalyzer(), sleep=lambda _: None, **kwargs)
+
+
 def setup_graph(task_count=2, saver=None):
     planner, search, github = FakePlanner(task_count), FakeSearchProvider(), FakeGitHubCollector()
-    graph = techlens.build_graph(planner=planner, search_provider=search,
+    graph = build_test_graph(planner=planner, search_provider=search,
                                 github_collector=github, checkpointer=saver)
     return graph, planner, search, github
 
@@ -33,7 +38,8 @@ def test_package_imports_and_graph_compiles():
     assert set(graph.get_graph().nodes) == {
         "__start__", "validate_request", "plan_research", "human_review", "collect_github",
         "web_research", "research_complete", "normalize_evidence", "validate_evidence",
-        "generate_report_stub", "__end__",
+        "apply_risk_rules", "project_analysis", "analyze_adoption", "validate_analysis",
+        "generate_report", "finalize_metrics", "__end__",
     }
 
 
@@ -82,7 +88,8 @@ def test_exact_partial_order_and_join_before_report():
     assert names[0] == "human_review"
     assert set(names[1:3]) == {"collect_github", "web_research"}
     assert names[3:] == ["research_complete", "normalize_evidence",
-                         "validate_evidence", "generate_report_stub"]
+                         "validate_evidence", "apply_risk_rules", "project_analysis", "analyze_adoption",
+                         "validate_analysis", "generate_report", "finalize_metrics"]
     for event in resumed[1:3]:
         assert "current_round" not in next(iter(event.values()))
     assert set(resumed[4]["normalize_evidence"]) == {"evidence"}
@@ -164,20 +171,19 @@ def test_stable_thread_and_missing_thread():
 
 
 @pytest.mark.parametrize("task_count", [0, 8])
-def test_empty_or_maximum_web_plan_and_zero_dollar_are_supported(task_count):
+def test_empty_or_maximum_web_plan_is_supported(task_count):
     graph, planner, search, github = setup_graph(task_count=task_count)
     request = make_request(3)
-    request.constraints.max_run_cost_usd = Decimal("0")
     graph.invoke({"request": request}, CONFIG)
     result = graph.invoke(Command(resume={"action": "approve"}), CONFIG)
     assert len(planner.calls) == 1 and len(github.calls) == 3
     assert len(search.calls) == task_count
     assert result["current_round"] == 1
-    assert result["research_plan"].max_run_cost_usd == Decimal("0")
+    assert result["research_plan"].max_run_cost_usd == Decimal("0.15")
 
 
 @pytest.mark.parametrize("branch", ["github", "web"])
-def test_provider_failure_prevents_join_and_success_report(branch):
+def test_provider_failure_is_accounted_and_report_is_partial(branch):
     graph, planner, search, github = setup_graph()
     attempts = []
 
@@ -189,14 +195,14 @@ def test_provider_failure_prevents_join_and_success_report(branch):
 
     if branch == "web":
         search.search = fail
-    graph = techlens.build_graph(planner=planner, search_provider=search,
+    graph = build_test_graph(planner=planner, search_provider=search,
                                  github_collector=fail if branch == "github" else github)
     graph.invoke({"request": make_request()}, CONFIG)
-    with pytest.raises((GitHubCollectionError, SearchResponseError)):
-        graph.invoke(Command(resume={"action": "approve"}), CONFIG)
+    result = graph.invoke(Command(resume={"action": "approve"}), CONFIG)
+    assert result["report"].status == "partial"
     state = graph.get_state(CONFIG).values
-    assert state["current_round"] == 0 and "report" not in state
-    assert len(attempts) == 1
+    assert state["current_round"] == 1 and state["report"].status == "partial"
+    assert len(attempts) == (1 if branch == "github" else 2)
 
 
 def test_real_t002_collector_reused_after_approval(github_candidate, github_payloads, fixed_now):
@@ -211,7 +217,7 @@ def test_real_t002_collector_reused_after_approval(github_candidate, github_payl
             assert candidate == github_candidate
             return collect_engineering_signals(candidate, http_client=client, collected_at=fixed_now)
 
-        graph = techlens.build_graph(planner=FakePlanner(), search_provider=FakeSearchProvider(),
+        graph = build_test_graph(planner=FakePlanner(), search_provider=FakeSearchProvider(),
                                     github_collector=collector)
         graph.invoke({"request": request}, CONFIG)
         assert requests == []
@@ -243,7 +249,7 @@ def test_approve_revalidates_saved_plan():
     tampered = paused["research_plan"].model_copy(deep=True)
     tampered.comparison_targets.append("candidate-999")
     graph.update_state(CONFIG, {"research_plan": tampered})
-    with pytest.raises(PlanReviewError):
+    with pytest.raises(ExecutionBlocked):
         graph.invoke(Command(resume={"action": "approve"}), CONFIG)
     assert search.calls == github.calls == []
 
@@ -259,20 +265,20 @@ def test_empty_resume_does_not_authorize_research():
 
 
 def test_invalid_normalized_evidence_prevents_success_report(monkeypatch):
-    original_normalizer = graph_module.normalize_evidence
+    original_normalizer = graph_module.normalize_records
 
-    def bad_normalizer(state):
-        update = original_normalizer(state)
-        update["evidence"][0] = update["evidence"][0].model_copy(update={"title": "fabricated"})
-        return update
+    def bad_normalizer(*args):
+        records = original_normalizer(*args)
+        records[0] = records[0].model_copy(update={"title": "fabricated"})
+        return records
 
-    monkeypatch.setattr(graph_module, "normalize_evidence", bad_normalizer)
+    monkeypatch.setattr(graph_module, "normalize_records", bad_normalizer)
     graph, planner, search, github = setup_graph()
     graph.invoke({"request": make_request()}, CONFIG)
-    with pytest.raises(EvidenceValidationError):
-        graph.invoke(Command(resume={"action": "approve"}), CONFIG)
+    result = graph.invoke(Command(resume={"action": "approve"}), CONFIG)
+    assert result["report"].status == "failed"
     state = graph.get_state(CONFIG).values
     assert state["current_round"] == 1
-    assert "evidence_validation" not in state and "report" not in state
+    assert "evidence_validation" not in state and state["report"].status == "failed"
     assert len(planner.calls) == len(github.calls) == 1
     assert len(search.calls) == 2
