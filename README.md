@@ -80,4 +80,21 @@ Statuses distinguish completed, partial, rejected, and failed. Expected source/b
 
 Metrics include start/end times and elapsed wall time including human-review wait, admitted provider attempts and ambiguous attempts, supplied token/credit usage, measured GitHub requests, evidence/claim/round counts, settled estimates and unresolved reservations. Planner, analyzer, LLM, count, and search attempt totals count every admitted ledger record. Admission alone does not prove that transport began. `ambiguous_attempts` counts records without a settled provider outcome, including reservations interrupted before dispatch; `outstanding_reservations_usd` retains their liability. Failed GitHub request totals are unknown because the unchanged T-002 wrapper exposes its measured count only on success.
 
-T-006 semantic evaluation and security measurement, automatic research sufficiency loops, source credibility scores, aggregate adoption scoring, RAG, UI, databases and persistent recovery remain outside this implementation.
+Automatic research sufficiency loops, source credibility scores, aggregate adoption scoring, RAG, UI, databases and persistent recovery remain outside this implementation.
+
+## T-006A offline evaluation
+
+The separate offline harness contains 26 synthetic cases and 52 canned samples. It
+exercises existing structural validators and fake-provider boundaries, and scores
+explicit fixture expectations. It does not modify the production workflow or make
+live calls. Actual-model semantic quality and prompt-injection resistance remain
+**NOT VERIFIED**; fixture labels are not human adjudication.
+
+```text
+uv run --frozen --offline --no-sync python -m techlens.evaluation --dataset evals/t006/v1 --format markdown
+```
+
+The default command is read-only. Optional `--output-dir new-directory` exports JSON
+and Markdown without overwriting existing output. See [evaluation documentation](docs/t006-evaluation.md)
+and the [fixture-only baseline](evals/t006/v1/baseline.md). T-006B live execution and its
+batch runner are not implemented or authorized.

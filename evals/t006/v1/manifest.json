@@ -1,0 +1,25 @@
+{
+  "analysis_schema_digest": "3124c082714cb3c62240450551e42da60df65c40766ae4841446d740b9f3f660",
+  "analyzer_prompt_digest": "8a3031e112351fd1c7a42a569839bab3119d8c3c03231a5c40ebfdbe5409f9ac",
+  "case_count": 26,
+  "dataset_version": "t006-v1",
+  "file_digests": {
+    "cases.jsonl": "56afda01caddd751c7727d7efb20df43383b8e63f0a5899a699a97202d956bf9",
+    "labels.jsonl": "504a932edb6e54fe9f5c7a08fd45394438fc995c019f77684dadbf7a0621f099",
+    "samples.jsonl": "d195c9db83a4c54a81341222c0bc6bc0306e6b78930b5a90699cb39411847021",
+    "source_bundles.jsonl": "fdd5baaaffbaf8ed246963cb195d2915fcfcf26318a1d500126b3b46bf03bce7"
+  },
+  "production_contract_digests": {
+    "analysis.py": "c87d702c23aa275cf5967a2b40493cc8124f6aa34275a7b4820277c8b4d54431",
+    "analysis_models.py": "5a23bfe04ad5667ddd7bc24b977f6e68599f66cc78df66823a087f1ac855948d",
+    "budget.py": "0aa9ba0b64b27848d147d8d7ae27b7a32c0142eec2acab70fc774b1445c3100a",
+    "evidence.py": "6967bdaf3c0df118b2a29cf75b542bd37b5315497704f369d98a9d7f1d49c058",
+    "execution.py": "49d54dff4e3b8b2a99e8535756090192b0b4304044909bd0b378fa5187c4cc46",
+    "graph.py": "4d49f78eb56f0d0132dba578107cf0d652c20e7d679dafb224bfdc9a3f28a092",
+    "reporting.py": "ea1279c8073abb22b975121a3b977dabc01a7d90c6e104893a94125f5cf69074"
+  },
+  "provenance": "synthetic / fixture expectations / no human adjudication",
+  "rubric_version": "t006-v1",
+  "sample_count": 52,
+  "source_commit": "dd2441e"
+}
