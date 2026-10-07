@@ -1,0 +1,7 @@
+{
+  "assessment_id": "local-single",
+  "candidates": [{"name": "LangGraph", "repository_url": "https://github.com/langchain-ai/langgraph"}],
+  "team_profile": {"primary_languages": ["Python"], "backend_stack": []},
+  "priorities": ["Understand maintenance observations"],
+  "constraints": {"max_research_rounds": 1, "max_web_searches": 2, "max_candidates": 1, "max_run_cost_usd": "0.15"}
+}

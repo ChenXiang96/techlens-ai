@@ -1,0 +1,10 @@
+{
+  "assessment_id": "local-comparison",
+  "candidates": [
+    {"name": "LangGraph", "repository_url": "https://github.com/langchain-ai/langgraph"},
+    {"name": "AutoGen", "repository_url": "https://github.com/microsoft/autogen"}
+  ],
+  "team_profile": {"primary_languages": ["Python"], "backend_stack": [], "team_size": 4},
+  "priorities": [],
+  "constraints": {"max_research_rounds": 1, "max_web_searches": 2, "max_candidates": 2, "max_run_cost_usd": "0.15"}
+}

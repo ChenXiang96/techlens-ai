@@ -1,0 +1,6 @@
+{
+  "assessment_id": "local-unknown-context",
+  "candidates": [{"name": "LangGraph", "repository_url": "https://github.com/langchain-ai/langgraph"}],
+  "team_profile": {},
+  "priorities": []
+}

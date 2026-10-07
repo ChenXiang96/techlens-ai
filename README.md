@@ -98,3 +98,15 @@ The default command is read-only. Optional `--output-dir new-directory` exports 
 and Markdown without overwriting existing output. See [evaluation documentation](docs/t006-evaluation.md)
 and the [fixture-only baseline](evals/t006/v1/baseline.md). T-006B live execution and its
 batch runner are not implemented or authorized.
+# Local CLI MVP
+
+Run `python -m techlens --help` or the installed `techlens --help` command.
+Start with `techlens doctor`, then `techlens demo --scenario single`; comparison
+and partial demo scenarios are also available. Demos use packaged synthetic data,
+the real approval interrupt, no credentials, and no network. Type `approve` or
+`reject`, or use `save-plan` / `modify` to review an edited plan.
+
+See [the local CLI guide](docs/local-cli.md) for live configuration gates, request
+examples, installation verification, safe exports, exit codes and limitations.
+No production count-price basis is supplied; live billing and provider behavior
+remain NOT VERIFIED. T-006A is a separate offline evaluation harness, not the demo.

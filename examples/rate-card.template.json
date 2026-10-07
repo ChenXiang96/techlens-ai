@@ -1,0 +1,17 @@
+{
+  "model": "REPLACE_WITH_APPLICABLE_MODEL",
+  "currency": "USD",
+  "source_reference": "NON-EXECUTABLE TEMPLATE: supply trusted upper-rate provenance",
+  "effective_date": "REPLACE_WITH_EFFECTIVE_DATE",
+  "input_usd_per_million": "REPLACE_WITH_TRUSTED_UPPER_RATE",
+  "output_usd_per_million": "REPLACE_WITH_TRUSTED_UPPER_RATE",
+  "max_input_tokens": "REPLACE_WITH_INPUT_BOUND",
+  "max_output_tokens": "REPLACE_WITH_OUTPUT_BOUND_AT_LEAST_8192",
+  "count_upper_fee": "REPLACE_WITH_INDEPENDENTLY_JUSTIFIED_UPPER_FEE",
+  "count_source_reference": "REPLACE_WITH_INDEPENDENT_COUNT_FEE_SOURCE",
+  "count_effective_date": "REPLACE_WITH_EFFECTIVE_DATE",
+  "count_authoritative_zero": false,
+  "search_upper_fee": "REPLACE_WITH_TRUSTED_SEARCH_UPPER_FEE",
+  "search_source_reference": "REPLACE_WITH_SEARCH_FEE_SOURCE",
+  "search_effective_date": "REPLACE_WITH_EFFECTIVE_DATE"
+}
