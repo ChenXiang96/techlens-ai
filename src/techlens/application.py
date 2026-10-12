@@ -17,9 +17,10 @@ from techlens.exporting import save_plan
 from techlens.graph import build_graph
 from techlens.models import ResearchPlan
 from techlens.planning import validate_plan, PlannerError, candidate_catalog
-from techlens.presentation import safe_url
+from techlens.presentation import safe_url, render_plan, render_plan_changes, REVIEW_HELP
 from techlens.research_models import PlanReviewDecision
 from techlens.authorization import require_authorization, LiveAuthorizationError
+from techlens.request_builder import InputBoundaryError
 
 
 _privacy_lock = RLock()
@@ -172,7 +173,7 @@ class AssessmentSession:
         return "Interrupted; accounting unavailable, not zero. Charges may be unresolved. Do not replay this run."
 
 
-def run_review(session, read, write, public):
+def run_review(session, read, write, public, *, mode=None):
     state = session.start()
     if not state.get("__interrupt__"):
         return state
@@ -180,24 +181,51 @@ def run_review(session, read, write, public):
     catalog = [c.model_dump(mode="json") for c in candidate_catalog(session.request)]
     for candidate in catalog:
         safe_url(candidate["repository_url"])
-    display = public.json({"candidates": catalog, "research_plan": plan.model_dump(mode="json")})
-    # JSON escapes all user-controlled newlines; application owns every prompt.
-    write("RESEARCH PLAN — review before external research\n" + display)
+    mode = mode or ("live" if session.authorization else "demo")
+    write(render_plan(session.request, plan, public, mode=mode))
     while True:
-        action = read("Action [approve / modify / reject / save-plan]: ").strip().casefold()
-        if action not in {"approve", "modify", "reject", "save-plan"}:
+        raw = read("Action [approve / modify / reject / save-plan / view / json / help]: ")
+        public.check(raw)
+        action = raw.strip().casefold()
+        if action not in {"approve", "modify", "reject", "save-plan", "view", "json", "help"}:
             write("Invalid action; research remains unapproved.\n")
             continue
         try:
+            if action in {"view", "json", "help"}:
+                if action == "view":
+                    write(render_plan(session.request, plan, public, mode=mode))
+                elif action == "json":
+                    write(public.json({"candidates": catalog, "research_plan": plan.model_dump(mode="json")}))
+                else:
+                    write(REVIEW_HELP)
+                continue
             if action == "save-plan":
-                save_plan(read("New plan JSON file: ").strip(), plan, public)
+                path = read("New plan JSON file: ").strip()
+                public.check(path)
+                save_plan(path, plan, public)
                 write("Plan saved. Review is still pending.\n")
                 continue
             modified = None
             if action == "modify":
-                modified = parse_model(load_json(read("Modified plan JSON file: ").strip()), ResearchPlan)
+                path = read("Modified plan JSON file: ").strip()
+                public.check(path)
+                modified = parse_model(load_json(path), ResearchPlan)
                 public.check(modified.model_dump(mode="json"))
             decision = session.decision(action, modified)
+            if action == "modify":
+                write(render_plan_changes(session.request, plan, decision.modified_plan, public))
+                while True:
+                    answer = read("Type APPLY to submit the modified plan, or CANCEL to retain the pending plan: ")
+                    public.check(answer)
+                    if answer in {"APPLY", "CANCEL"}:
+                        break
+                    write("Enter exactly APPLY or CANCEL. Research remains unapproved.\n")
+                if answer == "CANCEL":
+                    write("Modification cancelled. The original plan is still pending.\n")
+                    continue
+        except InputBoundaryError:
+            # The bounded read may leave a suffix. It is not another user action.
+            raise
         except ApplicationError as error:
             write(public.terminal(str(error)) + "\n")
             continue

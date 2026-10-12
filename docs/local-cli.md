@@ -22,6 +22,59 @@ No checkout, tests, evaluation dataset, credentials, or network are needed for d
 
 ## Request and configuration
 
+Create a standalone request through an interactive English terminal:
+
+```text
+techlens request create --output new-request.json
+```
+
+The parent directory must already exist and the selected file must be new. The
+builder asks for one to three candidates, preserves their order and duplicate
+names, and validates repository URLs locally as GitHub repository roots. Optional
+homepage URLs must use HTTP/HTTPS and contain no credentials. It never checks
+repository existence, constructs a session/client, counts tokens, or searches.
+
+Enter an assessment ID or leave it blank for a locally generated `assessment-`
+UUID. Candidate IDs are derived later from request order; no candidate/task IDs
+are added to the request JSON. Blank team size remains unknown. Primary languages,
+backend stack and priorities use one item per line; Enter ends a list. Commas are
+literal text, duplicate values are preserved, and lists have at most 20 items.
+
+There are exactly four optional descriptive fields: `ai_experience`,
+`deployment_environment`, `production_criticality`, and `framework_churn_tolerance`.
+Blank answers remain `None`; skipped lists remain independent empty lists. The
+builder infers no skills, requirements or preferences from other answers.
+
+Guided defaults are two web-search attempts, one declared round, and a candidate
+limit equal to the selected count. Guided ranges are 1–8 searches and 1–2 declared
+rounds. The existing JSON model accepts its existing wider declared limits; current
+execution performs at most one research round regardless of a higher declaration.
+Search attempts include any permitted retries. Request limits become immutable
+for the subsequent assessment and cannot be increased in plan review.
+
+The guided USD budget defaults to **0**; the domain JSON default remains USD 0.15.
+Zero blocks the existing live paid-work path. A positive amount must be explicitly
+entered and is only request data, never permission. Use a finite non-negative
+decimal without a currency symbol or exponent; no float conversion or rounding
+is performed. The builder asks for neither credentials nor a rate card.
+
+Input bounds: assessment ID 128 characters; candidate name 256; URLs 2048;
+descriptive context 1024; list items 256; positive integers nine digits; budget 32.
+The CLI bounds each physical input line to 4096 data characters, excluding at
+most one LF or CRLF terminator. Repeated carriage returns count as data. An
+oversized/truncated input ends the command with code 2; no unread suffix is used
+as an action or confirmation, and the CLI does not drain the line. A late viewer
+failure does not undo a terminal result or a published export. Invalid fields receive fixed
+English guidance without echoing rejected data. Noninteractive creation fails
+without publication. After inspecting the entire request summary, type exactly
+`SAVE` or `CANCEL`. Saving stages the fully validated JSON, flushes it, and publishes
+with a no-clobber hard link. Unsupported filesystems or collisions fail safely.
+EOF/Ctrl+C before publication leaves no request file. Publication is the commit
+point; cancellation afterward does not roll back an already saved valid request.
+
+Saving does not invoke `assess`, choose live mode or issue a grant. Synthetic demos
+cannot assess this new request; their repository observations are fictional.
+
 See `examples/request-single.json`, `request-comparison.json`, and
 `request-unknown-team.json` in the repository. A minimal request is:
 
@@ -70,12 +123,27 @@ Do not use fictional demo prices for live operation.
 
 ## Human review and cancellation
 
-The complete plan and original candidate catalog are displayed as escaped JSON.
+The default review is an English layout showing every original candidate ID,
+name and repository, objective, questions, engineering checks, web-task ID,
+candidate association/query/purpose, comparison target and immutable limit.
+Cross-candidate tasks are explicitly labeled. Values are complete, quoted and
+escaped; display does not truncate approval information or open a pager.
+`view` redraws the plan, `json` displays the complete escaped plan/catalog, and
+`help` explains the actions. These local actions create no reservations, provider
+calls or graph resume. They retain the same session, saver, executor and thread.
+
 `save-plan` asks for a new path and exclusively writes the validated plan. Edit it
 yourself, choose `modify`, and supply its path. No editor or shell is launched.
 Candidate associations, canonical web task sequence, comparison targets and limits
 must satisfy the existing plan validator. Valid existing plan edits remain allowed.
 Invalid input stays in the review loop and authorizes no research.
+
+A valid modification shows every changed objective/question/check and complete
+old/new task blocks by position, including task order, IDs, association, query and
+purpose. Canonical IDs are positional; the preview does not guess identity across
+reordering. Type exactly `APPLY` to submit the validated modification, or `CANCEL`
+to retain the original pending plan. Even an unchanged proposed plan requires
+confirmation. EOF/Ctrl+C does not apply the proposal. No planning is repeated.
 
 One graph/executor/saver/thread persists through review; planning is not repeated.
 Reject follows the graph's rejected-report route. EOF or Ctrl-C never approves.
@@ -85,6 +153,23 @@ missing accounting is not zero. Reservations are not released or uncertain calls
 replayed. Process loss destroys the in-memory session; a later command is NOT recovery.
 
 ## Reports and public artifacts
+
+`demo` and `assess` accept `--report-view summary` (default) or `--report-view full`.
+The terminal summary resolves all candidate and comparison judgments, exact claim
+statements/citations, section associations, risk observations, unknowns, limitations
+and accounting. It reduces repetition rather than selecting favorable findings.
+It can remain long when qualifications are numerous. Both views validate against
+the same authoritative state; the full view is the complete Markdown report.
+
+In an interactive terminal, summary mode offers `Report [full / done; Enter=done]:`
+after rendering and any requested export publication. `full` reads the retained
+result; it does not invoke the graph again. `done`, Enter and EOF return the
+original report status code (0/3/4/5). Ctrl+C returns 130 with a report-viewing
+diagnostic stating that the terminal result remains available and no assessment
+was restarted. It neither changes the report status nor removes a published bundle.
+Noninteractive demos have no optional viewer; `--report-view full` selects complete
+output from the outset. Display or export failure follows the safe error path and
+never restarts research or announces a completed export prematurely.
 
 The renderer revalidates the terminal report against authoritative state. It resolves
 the existing 13 sections, claims/citations, six dimensions, risks, context, comparison,
@@ -115,7 +200,37 @@ are rejected. The local OS account/filesystem remains trusted against active tam
 
 Exit codes: 0 success/completed; 2 invalid input/configuration; 3 rejected;
 4 partial; 5 failed/integrity or unsafe output; 6 application/export failure;
-130 interrupted. Export failure does not change the report's assessment status.
+7 live authorization denied; 130 interrupted or local request cancellation.
+Export failure does not change the report's assessment status.
+
+## Offline user walkthrough
+
+1. Run `techlens request create --output new-request.json`. Enter a name and an
+   original GitHub root URL; skip unknown context and retain budget 0. Inspect
+   the summary and type `SAVE`. This prepares input; it does not research it.
+2. Run `techlens demo --scenario single --output-dir new-single-report`. Use
+   `view`, `json` and `help`, then `approve`. Inspect the summary; type `full`
+   for all sections and `done` to close. Verify the complete export manifest.
+3. Run `techlens demo --scenario comparison --output-dir new-comparison-report`.
+   Approve and inspect the cited mixed maintenance observation, both candidate
+   source associations, and the dimensions still marked insufficient information.
+4. Run `techlens demo --scenario partial --output-dir new-partial-report`.
+   Approve; inspect failed synthetic retrieval, limitations and partial status.
+5. Run `techlens demo --scenario single --output-dir new-rejected-report` and
+   choose `reject`. The report is rejected; its research round remains zero.
+6. In another single demo, choose `save-plan` and a new JSON path. Manually edit
+   its objective/query. Choose `modify`, supply that file, inspect old/new values,
+   then `CANCEL`. Review remains pending. Repeat and type `APPLY` to proceed.
+7. Try a modification containing an invented candidate or changed limit. It is
+   rejected without research; use `view` to inspect the unchanged pending plan.
+8. Cancel request creation or review using EOF/Ctrl+C. No save/apply/approval is
+   implied. Before terminal completion, saved accounting can be incomplete and
+   unresolved liability remains reserved. At the completed viewer, EOF preserves
+   the result code and Ctrl+C leaves the terminal result/export intact.
+
+Use new destinations for every publication. None of these steps requires keys,
+Python programming or live authorization. Live configuration, prices, billing,
+Python 3.11 execution and T-006B remain separate verification gates.
 
 ## Installation and offline verification
 

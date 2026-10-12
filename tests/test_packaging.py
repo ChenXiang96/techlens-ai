@@ -50,7 +50,7 @@ atexit.register(receipt)
     return python, cwd, env, repository
 
 
-def run(installed, args, *, console=False, decision=""):
+def run(installed, args, *, console=False, decision="", interactive=False):
     python, cwd, env, repository = installed
     identity = uuid4().hex
     receipt = cwd / f"receipt-{identity}.json"
@@ -58,6 +58,63 @@ def run(installed, args, *, console=False, decision=""):
     env = {**env, "TECHLENS_SMOKE_RECEIPT": str(receipt), "TECHLENS_SMOKE_ID": identity}
     executable = python.parent / ("techlens.exe" if os.name == "nt" else "techlens")
     command = [str(executable)] if console else [str(python), "-m", "techlens"]
+    if interactive:
+        # Controlled terminal streams in an installed-only child; no production bypass.
+        script = '''import io, sys, httpx, openai
+import techlens.cli as cli
+attempts = []
+def forbidden(*args, **kwargs):
+    attempts.append(True)
+    raise AssertionError("Local operation attempted a live boundary")
+httpx.Client.__init__ = forbidden
+httpx.Client.send = forbidden
+openai.OpenAI.__init__ = forbidden
+cli.authorize_live_run = forbidden
+if sys.argv[1] == "request":
+    cli.AssessmentSession = forbidden
+dependencies, sessions = [], []
+original_dependencies, original_session = cli.demo_dependencies, cli.AssessmentSession
+def observed_dependencies(scenario):
+    value = original_dependencies(scenario)
+    dependencies.append(value)
+    return value
+def observed_session(*args, **kwargs):
+    value = original_session(*args, **kwargs)
+    sessions.append(value)
+    return value
+cli.demo_dependencies, cli.AssessmentSession = observed_dependencies, observed_session
+class Terminal(io.StringIO):
+    def isatty(self):
+        return True
+    def readline(self, *args):
+        value = super().readline(*args)
+        if value.strip() == "<CTRL-C>":
+            raise KeyboardInterrupt()
+        return value
+out = Terminal()
+sys.stdin.reconfigure(newline="")  # Keep CR test data verbatim in controlled streams.
+code = cli.main(sys.argv[1:], stdin=Terminal(sys.stdin.read()), stdout=out)
+if sys.argv[1] == "request" and code == 0:
+    from techlens.configuration import load_json, parse_model
+    from techlens.models import AssessmentRequest
+    parse_model(load_json(sys.argv[sys.argv.index("--output") + 1]), AssessmentRequest)
+print(out.getvalue(), end="")
+print("OFFLINE live constructor/transport/authorization attempts:", len(attempts))
+if dependencies:
+    import json
+    deps = dependencies[0]
+    values = sessions[0].graph.get_state(sessions[0].config).values
+    ledger = values["budget_ledger"]
+    print("OFFLINE synthetic observations:", json.dumps({
+        "planner_count": deps.planner.count_calls, "planner_generation": deps.planner.generation_calls,
+        "analyzer_count": deps.analyzer.count_calls, "analyzer_generation": deps.analyzer.generation_calls,
+        "search": deps.search.calls, "github": len(deps.github.calls),
+        "plan_status": values.get("plan_status"), "attempts": len(ledger.attempts),
+        "settled": str(ledger.settled), "outstanding": str(ledger.outstanding)}))
+assert not attempts
+raise SystemExit(code)
+'''
+        command = [str(python), "-c", script]
     result = subprocess.run(command + args, cwd=cwd, env=env, input=decision,
                             text=True, encoding="utf-8", capture_output=True, timeout=60)
     assert receipt.exists(), result.stderr
@@ -166,3 +223,99 @@ def test_installed_assess_denied_without_interactive_authorization(installed, co
     result, _ = run(installed, args, console=console, decision="AUTHORIZE LIVE forged\n")
     assert result.returncode == 7
     assert "No provider work started" in result.stdout
+
+
+@pytest.mark.parametrize("count", [1, 2, 3])
+def test_installed_guided_request_creation_and_roundtrip(installed, count):
+    path = installed[1] / f"guided-{count}.json"
+    values = [f"installed-{count}", str(count)]
+    for index in range(count):
+        values.extend(["Same name", f"https://github.com/example/project-{index + 1}", ""])
+    budget = "1.25" if count == 3 else ""
+    values.extend([""] * 8 + ["", "", budget, "SAVE"])
+    result, _ = run(installed, ["request", "create", "--output", str(path)],
+                    interactive=True, decision="\n".join(values) + "\n")
+    assert result.returncode == 0, result.stdout + result.stderr
+    data = json.loads(path.read_text(encoding="utf-8"))
+    assert len(data["candidates"]) == count and data["constraints"]["max_run_cost_usd"] == (budget or "0")
+    assert [c["name"] for c in data["candidates"]] == ["Same name"] * count
+    assert data["team_profile"] == {"team_size": None, "primary_languages": [], "backend_stack": [],
+        "ai_experience": None, "deployment_environment": None, "production_criticality": None,
+        "framework_churn_tolerance": None}
+    assert "OFFLINE live constructor/transport/authorization attempts: 0" in result.stdout
+    # The guarded child also reloaded this file through installed application validation.
+
+
+@pytest.mark.parametrize("answer", ["", "<CTRL-C>\n"])
+def test_installed_guided_cancellation_no_file(installed, answer):
+    path = installed[1] / ("cancel-control.json" if answer else "cancel-eof.json")
+    result, _ = run(installed, ["request", "create", "--output", str(path)], interactive=True, decision=answer)
+    assert result.returncode == 130 and not path.exists()
+    assert "No assessment was started" in result.stdout
+
+
+def test_installed_modification_preview_cancel_apply_and_full_view(installed):
+    saved, modified, destination = (installed[1] / name for name in ("plan.json", "modified.json", "modified-report"))
+    first, _ = run(installed, ["demo"], interactive=True,
+                   decision=f"save-plan\n{saved}\nreject\ndone\n")
+    assert first.returncode == 3 and saved.exists()
+    proposal = json.loads(saved.read_text(encoding="utf-8"))
+    proposal["objective"] = "Installed user-edited objective"
+    modified.write_text(json.dumps(proposal), encoding="utf-8")
+    result, _ = run(installed, ["demo", "--output-dir", str(destination)], interactive=True,
+        decision=f"view\njson\nhelp\nmodify\n{modified}\nCANCEL\nmodify\n{modified}\nAPPLY\nfull\ndone\n")
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert "Modification cancelled" in result.stdout and "Installed user-edited objective" in result.stdout
+    assert "## 13. Known Uncertainties" in result.stdout
+    assert result.stdout.index("Export complete") < result.stdout.index("Report [full")
+    assert json.loads((destination / "report.json").read_text(encoding="utf-8"))["report"]["status"] == "completed"
+    manifest = json.loads((destination / "manifest.json").read_text(encoding="utf-8"))
+    assert all(hashlib.sha256((destination / name).read_bytes()).hexdigest() == value for name, value in manifest["files"].items())
+    (destination / "walkthrough.txt").write_text(result.stdout, encoding="utf-8")
+
+
+def assert_installed_pending_boundary(result):
+    assert result.returncode == 2, result.stdout + result.stderr
+    assert "Input line exceeds the local input bound; operation cancelled." in result.stdout
+    assert "x" * 20 not in result.stdout and "Status:" not in result.stdout
+    observations = json.loads(result.stdout.split("OFFLINE synthetic observations: ", 1)[1])
+    assert observations["planner_count"] == observations["planner_generation"] == 1
+    assert observations["analyzer_count"] == observations["analyzer_generation"] == 0
+    assert observations["search"] == observations["github"] == 0
+    assert observations["plan_status"] == "pending" and observations["attempts"] == 2
+    assert float(observations["settled"]) > 0
+
+
+@pytest.mark.parametrize("action", ["save-plan", "modify"])
+@pytest.mark.parametrize("suffix", ["approve", "modify"])
+def test_installed_overlong_review_path_cannot_supply_approval(installed, action, suffix):
+    result, _ = run(installed, ["demo"], interactive=True,
+                    decision=action + "\n" + "x" * 4099 + suffix + "\n")
+    assert_installed_pending_boundary(result)
+
+
+@pytest.mark.parametrize("suffix", ["APPLY", "approve"])
+def test_installed_overlong_modify_confirmation_is_fatal(installed, suffix):
+    path = installed[1] / ("boundary-plan-" + suffix + ".json")
+    first, _ = run(installed, ["demo"], interactive=True,
+                   decision=f"save-plan\n{path}\nreject\ndone\n")
+    assert first.returncode == 3
+    result, _ = run(installed, ["demo"], interactive=True,
+                    decision=f"modify\n{path}\n" + "x" * 4099 + suffix + "\n")
+    assert "PROPOSED PLAN CHANGES" in result.stdout
+    assert_installed_pending_boundary(result)
+
+
+@pytest.mark.parametrize("point,raw", [(0, "x" * 4099 + "SAVE\n"),
+    (0, "id" + "\r" * 4097 + "1\n"), (16, "x" * 4099 + "SAVE\n")],
+    ids=["initial-answer", "master-cr", "save-confirmation"])
+def test_installed_overlong_builder_never_publishes(installed, point, raw):
+    values = ["installed-boundary", "1", "Name", "https://github.com/example/project", ""] + [""] * 11
+    prefix = "\n".join(values[:point]) + ("\n" if point else "")
+    path = installed[1] / f"boundary-request-{point}-{len(raw)}.json"
+    result, _ = run(installed, ["request", "create", "--output", str(path)],
+                    interactive=True, decision=prefix + raw)
+    assert result.returncode == 2 and not path.exists()
+    assert "Input line exceeds" in result.stdout and "x" * 20 not in result.stdout
+    assert "OFFLINE live constructor/transport/authorization attempts: 0" in result.stdout
+    assert "No assessment was started" not in result.stdout  # Fatal bound, not EOF cancellation.

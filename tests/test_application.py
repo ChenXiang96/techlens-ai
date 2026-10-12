@@ -72,7 +72,7 @@ def test_invalid_review_loop_modify_and_exclusive_save(tmp_path):
     destination = tmp_path / "plan.json"
     bad = tmp_path / "bad.json"
     bad.write_text('{"invalid": 1}')
-    replies = iter(["yes", "save-plan", str(destination), "modify", str(bad), "modify", str(destination)])
+    replies = iter(["yes", "save-plan", str(destination), "modify", str(bad), "modify", str(destination), "APPLY"])
 
     def read(prompt):
         assert dependencies.search.calls == 0
@@ -196,3 +196,85 @@ def test_tracing_suppression_and_restore(monkeypatch):
                    lambda _: "approve", lambda _: None, PublicOutput({}))
     assert os.environ["LANGSMITH_TRACING"] == "true"
     assert constructions == []
+
+
+def test_local_review_actions_and_cancelled_preview_preserve_session(tmp_path):
+    from copy import deepcopy
+    from techlens.configuration import load_json
+    dependencies = demo_dependencies("comparison")
+    session = AssessmentSession(demo_request("comparison"), dependencies)
+    saved = tmp_path / "saved.json"
+    edited = tmp_path / "edited.json"
+    actions = iter(["view", "json", "help", "wrong", "save-plan", str(saved),
+                    "modify", str(edited), "CANCEL", "view", "modify", str(edited), "APPLY"])
+    snapshots = []
+    identity = (session.graph, session.saver, session.executor, session.config)
+    output = []
+
+    def read(prompt):
+        assert (session.graph, session.saver, session.executor, session.config) == identity
+        assert dependencies.planner.count_calls == dependencies.planner.generation_calls == 1
+        assert dependencies.github.calls == [] and dependencies.search.calls == dependencies.analyzer.generation_calls == 0
+        if not snapshots:
+            snapshots.append(deepcopy(list(session.saver.list(session.config))))
+        else:
+            assert list(session.saver.list(session.config)) == snapshots[0]
+        reply = next(actions)
+        if reply == str(edited) and not edited.exists():
+            proposal = load_json(saved)
+            proposal["objective"] = "Locally revised objective"
+            edited.write_text(json.dumps(proposal), encoding="utf-8")
+        return reply
+
+    state = run_review(session, read, output.append, PublicOutput({}))
+    assert state["research_plan"].objective == "Locally revised objective"
+    assert state["plan_status"] == "modified"
+    assert dependencies.planner.count_calls == dependencies.planner.generation_calls == 1
+    assert dependencies.search.calls == 2 and len(dependencies.github.calls) == 2
+    assert "Modification cancelled" in "".join(output)
+    assert "Locally revised objective" in "".join(output)
+
+
+@pytest.mark.parametrize("field,value", [("comparison_targets", []), ("max_run_cost_usd", "100"),
+    ("web_tasks", [{"task_id": "other", "candidate_id": "candidate-999", "query": "x", "purpose": "x"}])])
+def test_invalid_modified_file_never_previews_or_researches(tmp_path, field, value):
+    dependencies = demo_dependencies("single")
+    session = AssessmentSession(demo_request("single"), dependencies)
+    path = tmp_path / "bad.json"
+    replies = iter(["modify", str(path), "reject"])
+    output = []
+    def read(_):
+        if not path.exists():
+            data = session.state["research_plan"].model_dump(mode="json")
+            data[field] = value
+            path.write_text(json.dumps(data), encoding="utf-8")
+        return next(replies)
+    state = run_review(session, read, output.append, PublicOutput({}))
+    assert "PROPOSED PLAN CHANGES" not in "".join(output)
+    assert state["plan_status"] == "rejected" and state["current_round"] == 0
+    assert dependencies.search.calls == dependencies.analyzer.generation_calls == 0
+    assert dependencies.github.calls == []
+
+
+@pytest.mark.parametrize("failure", [EOFError, KeyboardInterrupt])
+def test_modification_confirmation_cancellation_keeps_original_pending(tmp_path, failure):
+    from copy import deepcopy
+    session = AssessmentSession(demo_request("single"), demo_dependencies("single"))
+    path = tmp_path / "plan.json"
+    original = None
+    replies = iter(["modify", str(path)])
+    def read(prompt):
+        nonlocal original
+        if original is None:
+            original = deepcopy(list(session.saver.list(session.config)))
+            data = session.state["research_plan"].model_dump(mode="json")
+            data["objective"] = "Proposed only"
+            path.write_text(json.dumps(data), encoding="utf-8")
+        if prompt.startswith("Type APPLY"):
+            raise failure()
+        return next(replies)
+    with pytest.raises(failure):
+        run_review(session, read, lambda _: None, PublicOutput({}))
+    assert list(session.saver.list(session.config)) == original
+    assert session.state["plan_status"] == "pending"
+    assert session.request.constraints == demo_request("single").constraints

@@ -1,5 +1,19 @@
 # TechLens AI
 
+T-009 adds an English local request builder, readable plan review with confirmed
+modification previews, and summary/full report views. Start without credentials:
+
+```text
+techlens request create --output new-request.json
+techlens demo --scenario single --output-dir new-demo-report
+techlens demo --scenario comparison --report-view full
+```
+
+Request creation is local and defaults its guided budget to USD 0. It saves input;
+it does not assess the entered repositories, construct provider clients, or grant
+permission to spend. Demos use their own curated synthetic scenarios. See the
+[English walkthrough](docs/local-cli.md) for plan review, cancellation and exports.
+
 T-008 adds default-deny live authorization. Local commands and demos require no
 permission. `assess --live` requests exact run-specific interactive consent before
 client construction or paid planning; research-plan approval remains a separate gate.

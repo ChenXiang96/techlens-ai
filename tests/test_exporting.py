@@ -5,7 +5,7 @@ import os
 import pytest
 
 from techlens.configuration import ApplicationError
-from techlens.exporting import ExportDestination, save_plan
+from techlens.exporting import ExportDestination, save_plan, save_request
 from techlens.presentation import PublicOutput
 from techlens.application import AssessmentSession, demo_dependencies
 from techlens.demo import demo_request
@@ -96,3 +96,60 @@ def test_late_export_failure_does_not_repeat_graph(tmp_path, monkeypatch, failur
     assert deps.planner.generation_calls == deps.analyzer.generation_calls == deps.search.calls == 1
     assert len(deps.github.calls) == 1
     assert not (tmp_path / "out" / "manifest.json").exists()
+
+
+def test_request_exclusive_publication_complete_before_link_and_collision(tmp_path, monkeypatch):
+    request, path = demo_request("single"), tmp_path / "request.json"
+    original = os.link
+    observations = []
+    def link(source, target):
+        observations.append(json.loads(source.read_text(encoding="utf-8")))
+        assert not path.exists()
+        original(source, target)
+    monkeypatch.setattr(os, "link", link)
+    save_request(path, request, PublicOutput({}))
+    assert observations == [request.model_dump(mode="json")]
+    assert set(tmp_path.iterdir()) == {path}
+    before = path.read_bytes()
+    monkeypatch.setattr(os, "link", original)
+    with pytest.raises(ApplicationError):
+        save_request(path, request, PublicOutput({}))
+    assert path.read_bytes() == before and set(tmp_path.iterdir()) == {path}
+
+
+@pytest.mark.parametrize("failure", [OSError, KeyboardInterrupt])
+def test_request_staging_failure_does_not_publish_partial_json(tmp_path, monkeypatch, failure):
+    def fail(*_):
+        raise failure("private-path")
+    monkeypatch.setattr(os, "fsync", fail)
+    expected = ApplicationError if failure is OSError else KeyboardInterrupt
+    with pytest.raises(expected) as error:
+        save_request(tmp_path / "request.json", demo_request("single"), PublicOutput({}))
+    assert list(tmp_path.iterdir()) == []
+    if failure is OSError:
+        assert "private-path" not in str(error.value)
+        assert error.value.__context__ is None and error.value.__cause__ is None
+
+
+def test_request_racing_destination_preserves_other_owner_bytes(tmp_path, monkeypatch):
+    path, original = tmp_path / "request.json", os.link
+    def race(source, target):
+        path.write_bytes(b"other-owner")
+        original(source, target)
+    monkeypatch.setattr(os, "link", race)
+    with pytest.raises(ApplicationError):
+        save_request(path, demo_request("single"), PublicOutput({}))
+    assert path.read_bytes() == b"other-owner" and set(tmp_path.iterdir()) == {path}
+
+
+def test_request_secret_unsafe_homepage_and_missing_parent_blocked(tmp_path):
+    request = demo_request("single")
+    with pytest.raises(ApplicationError):
+        save_request(tmp_path / "secret.json", request, PublicOutput({"GITHUB_TOKEN": request.candidates[0].name}))
+    request.candidates[0].homepage = "https://user:private@example.com"
+    with pytest.raises(ApplicationError):
+        save_request(tmp_path / "unsafe.json", request, PublicOutput({}))
+    request.candidates[0].homepage = None
+    with pytest.raises(ApplicationError):
+        save_request(tmp_path / "missing" / "request.json", request, PublicOutput({}))
+    assert list(tmp_path.iterdir()) == []

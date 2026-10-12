@@ -9,8 +9,10 @@ from pydantic import BaseModel, ConfigDict
 
 from techlens.configuration import ApplicationError
 from techlens.models import AssessmentReport
+from techlens.models import AssessmentRequest
+from techlens.configuration import parse_model
 from techlens.research_models import PlannerCandidate
-from techlens.presentation import DEMO_NOTICE, DISCLAIMER, render_report, validated_report
+from techlens.presentation import DEMO_NOTICE, DISCLAIMER, render_report, validated_report, safe_url
 
 
 class ExportProvenance(BaseModel):
@@ -100,3 +102,30 @@ def save_plan(path, plan, public):
         failed = True
     if failed:
         raise ApplicationError("Plan file could not be exclusively created.", 6)
+
+
+def save_request(path, request, public):
+    """Stage validated request bytes, then publish once without overwriting."""
+    request = parse_model(request.model_dump(), AssessmentRequest)
+    public.check(request.model_dump(mode="json"))
+    for candidate in request.candidates:
+        safe_url(str(candidate.repository_url))
+        if candidate.homepage is not None:
+            safe_url(str(candidate.homepage))
+    data = public.json(request.model_dump(mode="json")).encode("utf-8")
+    if len(data) > 1_048_576:
+        raise ApplicationError("Request exceeds the bounded JSON input size.")
+    target = Path(path).absolute()
+    failed = False
+    try:
+        with TemporaryDirectory(prefix=".request-", dir=target.parent) as directory:
+            source = Path(directory) / "request.json"
+            with source.open("xb") as handle:
+                handle.write(data)
+                handle.flush()
+                os.fsync(handle.fileno())
+            os.link(source, target)
+    except OSError:
+        failed = True
+    if failed:
+        raise ApplicationError("Request could not be exclusively published in the existing parent directory.", 6)
