@@ -4,6 +4,7 @@ from dataclasses import dataclass
 import logging
 import os
 from uuid import uuid4
+from threading import RLock
 
 import httpx
 from langgraph.checkpoint.memory import InMemorySaver
@@ -18,27 +19,41 @@ from techlens.models import ResearchPlan
 from techlens.planning import validate_plan, PlannerError, candidate_catalog
 from techlens.presentation import safe_url
 from techlens.research_models import PlanReviewDecision
+from techlens.authorization import require_authorization, LiveAuthorizationError
+
+
+_privacy_lock = RLock()
+_privacy_users = 0
+_privacy_previous = None
 
 
 @contextmanager
 def private_execution():
     """Suppress inherited tracing/logging, without importing the evaluation harness."""
     names = ("LANGSMITH_TRACING", "LANGCHAIN_TRACING_V2", "LANGCHAIN_TRACING", "OPENAI_LOG")
-    previous = {name: os.environ.get(name) for name in names}
-    disabled = logging.root.manager.disable
-    try:
+    global _privacy_users, _privacy_previous
+    with _privacy_lock:
+        if _privacy_users == 0:
+            _privacy_previous = ({name: os.environ.get(name) for name in names}, logging.root.manager.disable)
+        _privacy_users += 1
         for name in names:
             os.environ[name] = "false" if name != "OPENAI_LOG" else ""
         logging.disable(logging.CRITICAL)
+    try:
         with tracing_context(enabled=False):
             yield
     finally:
-        logging.disable(disabled)
-        for name, value in previous.items():
-            if value is None:
-                os.environ.pop(name, None)
-            else:
-                os.environ[name] = value
+        with _privacy_lock:
+            _privacy_users -= 1
+            if _privacy_users == 0:
+                previous, disabled = _privacy_previous
+                logging.disable(disabled)
+                for name, value in previous.items():
+                    if value is None:
+                        os.environ.pop(name, None)
+                    else:
+                        os.environ[name] = value
+                _privacy_previous = None
 
 
 @dataclass
@@ -57,7 +72,12 @@ def demo_dependencies(scenario):
                         CannedGitHub(), demo_rates(), lambda: NOW)
 
 
-def live_dependencies(stack, rates, model, env, *, client_factory=httpx.Client):
+def live_dependencies(stack, rates, model, env, *, authorization=None, client_factory=httpx.Client):
+    authorization = require_authorization(authorization)
+    authorization.check(rates=rates)
+    if model != authorization.model:
+        raise LiveAuthorizationError("Provider model differs from authorization")
+    stack.callback(authorization.close)
     from techlens.openai_planner import OpenAIResearchPlanner
     from techlens.openai_analyzer import OpenAIAdoptionAnalyzer
     from techlens.tavily_search import TavilySearchProvider
@@ -65,28 +85,56 @@ def live_dependencies(stack, rates, model, env, *, client_factory=httpx.Client):
 
     def client():
         resource = client_factory(follow_redirects=False, trust_env=False)
-        stack.callback(resource.close)  # Own it BEFORE constructing an adapter.
+        authorization.own(resource)  # Own it BEFORE constructing an adapter.
         return resource
 
-    planner = OpenAIResearchPlanner(api_key=env["OPENAI_API_KEY"], model=model, http_client=client())
-    analyzer = OpenAIAdoptionAnalyzer(api_key=env["OPENAI_API_KEY"], model=model, http_client=client())
-    search = TavilySearchProvider(api_key=env["TAVILY_API_KEY"], http_client=client())
-    github_http = client()
-    return Dependencies(planner, analyzer, search,
-        lambda candidate: collect_engineering_signals(candidate, token=env.get("GITHUB_TOKEN", ""),
-                                                       http_client=github_http), rates)
+    complete = False
+    try:
+        with private_execution():
+            planner = OpenAIResearchPlanner(model=model, http_client=client(), authorization=authorization)
+            analyzer = OpenAIAdoptionAnalyzer(model=model, http_client=client(), authorization=authorization)
+            search = TavilySearchProvider(http_client=client(), authorization=authorization)
+            github_http = client()
+        def github(candidate):
+            return collect_engineering_signals(candidate, token=authorization.credential("GITHUB_TOKEN"),
+                http_client=github_http, authorization=authorization)
+        github.authorization = authorization
+        result = Dependencies(planner, analyzer, search, github, rates)
+        complete = True
+    except Exception:
+        pass
+    finally:
+        if not complete:
+            authorization.close()
+    if not complete:
+        raise LiveAuthorizationError("Live dependency construction failed; permission revoked")
+    return result
 
 
 class AssessmentSession:
-    def __init__(self, request, dependencies, *, thread_id=None):
+    def __init__(self, request, dependencies, *, thread_id=None, authorization=None):
+        self.authorization = authorization
+        if authorization:
+            authorization.check(request=request, rates=dependencies.rates, run_id=thread_id)
         self.request = request
         self.executor, self.saver = AttemptExecutor(), InMemorySaver()
-        self.config = {"configurable": {"thread_id": thread_id or str(uuid4())}}
+        self.config = {"configurable": {"thread_id": thread_id or (authorization.run_id if authorization else str(uuid4()))}}
         options = {"clock": dependencies.clock} if dependencies.clock else {}
         self.graph = build_graph(planner=dependencies.planner, analyzer=dependencies.analyzer,
             search_provider=dependencies.search, github_collector=dependencies.github,
-            rates=dependencies.rates, executor=self.executor, checkpointer=self.saver, **options)
+            rates=dependencies.rates, executor=self.executor, checkpointer=self.saver,
+            authorization=authorization, **options)
         self.state = None
+
+    def close(self):
+        if self.authorization:
+            self.authorization.close()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *_):
+        self.close()
 
     def start(self):
         self.state = self.graph.invoke({"request": self.request}, self.config)

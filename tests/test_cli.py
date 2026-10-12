@@ -14,6 +14,20 @@ class Terminal(io.StringIO):
         return True
 
 
+class AcceptingTerminal(Terminal):
+    """Respond to the actual application-generated run ID, then review normally."""
+    def __init__(self, output, action):
+        super().__init__(action)
+        self.output, self.accepted = output, False
+
+    def readline(self, *args):
+        if not self.accepted:
+            self.accepted = True
+            prompt = self.output.getvalue().split("Type AUTHORIZE LIVE ")[-1].split(" to continue:")[0]
+            return f"AUTHORIZE LIVE {prompt}\n"
+        return super().readline(*args)
+
+
 @pytest.mark.parametrize("args", [["--help"], ["--version"], ["demo", "--help"]])
 def test_help_and_version_use_injected_public_output(args):
     out = io.StringIO()
@@ -111,13 +125,13 @@ def test_live_blocked_before_factory(tmp_path, defect):
     rp, cp = tmp_path / "request.json", tmp_path / "rates.json"
     rp.write_text(json.dumps(request))
     cp.write_text(json.dumps(rates))
-    args = ["assess", "--request", str(rp), "--rate-card", str(cp)]
+    args = ["assess", "--live", "--request", str(rp), "--rate-card", str(cp)]
     if defect == "destination":
         args += ["--output-dir", str(tmp_path)]
     out = Terminal()
     code = main(args, stdin=io.StringIO() if defect == "noninteractive" else Terminal(), stdout=out,
         environ=env, factory=lambda *a: pytest.fail("Constructed clients before preconditions"))
-    assert code == (6 if defect == "destination" else 2)
+    assert code == (7 if defect == "noninteractive" else 6 if defect == "destination" else 2)
     assert "FAKE-KEY" not in out.getvalue() and "SECRET" not in out.getvalue()
 
 
@@ -129,12 +143,13 @@ def test_live_application_closes_owned_resources_with_offline_factory(tmp_path, 
     cp.write_text(demo_rates().model_dump_json())
     closed = []
 
-    def factory(stack, *_):
+    def factory(stack, *_, **kwargs):
         stack.callback(closed.append, True)
         return demo_dependencies("single")
 
-    assert main(["assess", "--request", str(rp), "--rate-card", str(cp)], stdin=Terminal(action),
-        stdout=Terminal(), environ={"OPENAI_API_KEY": "FAKE", "TAVILY_API_KEY": "FAKE",
+    out = Terminal()
+    assert main(["assess", "--live", "--request", str(rp), "--rate-card", str(cp)], stdin=AcceptingTerminal(out, action),
+        stdout=out, environ={"OPENAI_API_KEY": "FAKE", "TAVILY_API_KEY": "FAKE",
                                    "OPENAI_MODEL": "synthetic-local"}, factory=factory) == code
     assert closed == [True]
 
@@ -147,7 +162,7 @@ def test_provider_interruption_and_failure_close_and_do_not_retry(tmp_path, fail
     cp.write_text(demo_rates().model_dump_json())
     calls, closed = [], []
 
-    def factory(stack, *_):
+    def factory(stack, *_, **kwargs):
         stack.callback(closed.append, True)
         deps = demo_dependencies("single")
 
@@ -159,7 +174,7 @@ def test_provider_interruption_and_failure_close_and_do_not_retry(tmp_path, fail
         return deps
 
     out = Terminal()
-    assert main(["assess", "--request", str(rp), "--rate-card", str(cp)], stdin=Terminal("approve\n"),
+    assert main(["assess", "--live", "--request", str(rp), "--rate-card", str(cp)], stdin=AcceptingTerminal(out, "approve\n"),
         stdout=out, environ={"OPENAI_API_KEY": "FAKE", "TAVILY_API_KEY": "FAKE",
                              "OPENAI_MODEL": "synthetic-local"}, factory=factory) == code
     assert closed == calls == [True]

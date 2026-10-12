@@ -3,6 +3,7 @@ import json
 import openai
 from pydantic import ValidationError
 from techlens.budget import AttemptOutcome, Usage
+from techlens.authorization import require_authorization, LiveAuthorizationError, OPENAI_BASE, COUNT_URL, GENERATION_URL
 
 
 def structured_request(model, instructions, data, schema_type):
@@ -13,7 +14,14 @@ def structured_request(model, instructions, data, schema_type):
             "truncation": "disabled"}
 
 
-def call_openai(client, shared, *, schema_type=None, max_output_tokens=None):
+def call_openai(client, shared, *, schema_type=None, max_output_tokens=None, provider=None):
+    authorization = require_authorization(getattr(provider, "authorization", None))
+    if (client is not provider._client or str(client.base_url) != OPENAI_BASE
+        or client.max_retries != 0 or client._client.follow_redirects):
+        raise LiveAuthorizationError("OpenAI client configuration differs from authorization")
+    payload = shared if schema_type is None else {**shared, "max_output_tokens": max_output_tokens, "store": False}
+    operation = provider.stage + (":count" if schema_type is None else ":generate")
+    authorization.consume(provider, operation, payload, COUNT_URL if schema_type is None else GENERATION_URL)
     category, data, usage, retry_after = None, None, Usage(), None
     try:
         if schema_type is None:

@@ -10,6 +10,7 @@ from techlens.planning import PlannerConfigurationError, PlannerValidationError
 from techlens.tavily_search import TavilySearchProvider
 
 TOKEN = "openai-unit-test-secret-sentinel"
+from authorization_helpers import planner as authorized_planner, run_llm, grant
 
 
 def draft_for(request=None):
@@ -35,9 +36,9 @@ def response_for(draft=None):
 
 def run_attempt(handler, request=None):
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        planner = OpenAIResearchPlanner(api_key=TOKEN, http_client=client)
         request = request or make_request()
-        return planner.generate(planner.prepare(request))
+        planner = authorized_planner(OpenAIResearchPlanner, request=request, api_key=TOKEN, http_client=client)
+        return run_llm(planner, planner.prepare(request), request)["generate"]
 
 
 def assert_safe(outcome, caplog):
@@ -71,8 +72,8 @@ def test_real_sdk_structured_output_and_prompt_boundary(caplog):
         assert all(t == 30.0 for t in http_request.extensions["timeout"].values())
         return httpx.Response(200, json=response_for(draft_for(request)))
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        planner = OpenAIResearchPlanner(api_key=TOKEN, http_client=client)
-        outcome = planner.generate(planner.prepare(request))
+        planner = authorized_planner(OpenAIResearchPlanner, request=request, api_key=TOKEN, http_client=client)
+        outcome = run_llm(planner, planner.prepare(request), request)["generate"]
         assert planner.finalize(outcome.data, request) == make_plan(request)
     assert len(calls) == 1
     assert_safe(outcome, caplog)
@@ -83,11 +84,12 @@ def test_model_override_without_local_pricing_metadata(monkeypatch):
     monkeypatch.setenv("OPENAI_API_KEY", TOKEN)
     seen = []
     with httpx.Client(transport=httpx.MockTransport(lambda r: seen.append(r))) as client:
-        planner = OpenAIResearchPlanner(http_client=client)
+        planner = authorized_planner(OpenAIResearchPlanner, http_client=client)
         assert planner.model == "unknown-price-model-test" and planner._client.max_retries == 0
-        graph = build_graph(planner=planner, search_provider=None, rates=fictional_rates())
-        result = graph.invoke({"request": make_request()}, {"configurable": {"thread_id": "unknown-model"}})
-    assert result["report"].status == "partial" and seen == []
+        from techlens.authorization import LiveAuthorizationError
+        with pytest.raises(LiveAuthorizationError):
+            build_graph(planner=planner, search_provider=None, rates=fictional_rates(), authorization=planner.authorization)
+    assert seen == []
 
 
 @pytest.mark.parametrize("status", [400, 401, 403, 404, 429, 500, 302])
@@ -131,8 +133,8 @@ def test_model_plan_violations_fail_visibly(violation, caplog):
     else:
         draft["comparison_targets"] = ["Same name"]
     with httpx.Client(transport=httpx.MockTransport(lambda _: httpx.Response(200, json=response_for(draft)))) as client:
-        planner = OpenAIResearchPlanner(api_key=TOKEN, http_client=client)
-        outcome = planner.generate(planner.prepare(make_request()))
+        planner = authorized_planner(OpenAIResearchPlanner, api_key=TOKEN, http_client=client)
+        outcome = run_llm(planner, planner.prepare(make_request()))["generate"]
         if outcome.status == "succeeded":
             with pytest.raises(PlannerValidationError):
                 planner.finalize(outcome.data, make_request())
@@ -174,12 +176,13 @@ def test_full_mocked_provider_workflow_keeps_secrets_out_of_checkpoints(caplog):
         calls["search"] += 1
         return httpx.Response(200, json=search_response())
     saver = InMemorySaver()
-    config = {"configurable": {"thread_id": "secret-test"}}
+    auth = grant(OPENAI_API_KEY=TOKEN, TAVILY_API_KEY=SEARCH_TOKEN)
+    config = {"configurable": {"thread_id": auth.run_id}}
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         github = FakeGitHubCollector()
-        graph = build_graph(planner=OpenAIResearchPlanner(api_key=TOKEN, http_client=client),
-            search_provider=TavilySearchProvider(api_key=SEARCH_TOKEN, http_client=client),
-            analyzer=FakeAnalyzer(), github_collector=github, checkpointer=saver, rates=fictional_rates())
+        graph = build_graph(planner=OpenAIResearchPlanner(api_key=TOKEN, http_client=client, authorization=auth),
+            search_provider=TavilySearchProvider(api_key=SEARCH_TOKEN, http_client=client, authorization=auth),
+            analyzer=FakeAnalyzer(), github_collector=github, checkpointer=saver, rates=fictional_rates(), authorization=auth)
         paused = graph.invoke({"request": make_request()}, config)
         assert calls == {"count": 1, "planner": 1, "search": 0} and github.calls == []
         result = graph.invoke(Command(resume={"action": "approve"}), config)
@@ -201,11 +204,12 @@ def test_failed_provider_checkpoint_does_not_store_authenticated_exception(provi
             return httpx.Response(200, json=response_for())
         raise httpx.ConnectError(TOKEN, request=request)
     saver = InMemorySaver()
-    config = {"configurable": {"thread_id": "failed-secret-test"}}
+    auth = grant(OPENAI_API_KEY=TOKEN, TAVILY_API_KEY=SEARCH_TOKEN)
+    config = {"configurable": {"thread_id": auth.run_id}}
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        graph = build_graph(planner=OpenAIResearchPlanner(api_key=TOKEN, http_client=client),
-            search_provider=TavilySearchProvider(api_key=SEARCH_TOKEN, http_client=client),
-            github_collector=FakeGitHubCollector(), checkpointer=saver, rates=fictional_rates(), sleep=lambda _: None)
+        graph = build_graph(planner=OpenAIResearchPlanner(api_key=TOKEN, http_client=client, authorization=auth),
+            search_provider=TavilySearchProvider(api_key=SEARCH_TOKEN, http_client=client, authorization=auth),
+            github_collector=FakeGitHubCollector(), checkpointer=saver, rates=fictional_rates(), sleep=lambda _: None, authorization=auth)
         result = graph.invoke({"request": make_request()}, config)
         if "__interrupt__" in result:
             result = graph.invoke(Command(resume={"action": "approve"}), config)
@@ -222,6 +226,6 @@ def test_outer_malformed_json_is_sanitized(caplog):
 
 
 def test_direct_unbudgeted_planner_entry_is_blocked():
-    with OpenAIResearchPlanner(api_key=TOKEN) as planner:
+    with authorized_planner(OpenAIResearchPlanner, api_key=TOKEN) as planner:
         with pytest.raises(PlannerConfigurationError):
             planner.plan(make_request())

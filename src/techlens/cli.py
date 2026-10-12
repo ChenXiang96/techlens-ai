@@ -15,6 +15,7 @@ from techlens.presentation import DEMO_NOTICE, PublicOutput, render_report, safe
 from techlens.reporting import ReportValidationError
 from techlens.evidence import EvidenceError
 from techlens.analysis import AnalysisValidationError
+from techlens.authorization import authorize_live_run, LiveAuthorizationError
 
 
 class Parser(argparse.ArgumentParser):
@@ -37,6 +38,7 @@ def parser():
     live.add_argument("--request", required=True)
     live.add_argument("--rate-card", required=True)
     live.add_argument("--output-dir")
+    live.add_argument("--live", action="store_true", help="Request interactive authorization for this real run")
     return root
 
 
@@ -45,6 +47,7 @@ def main(argv=None, *, stdin=None, stdout=None, environ=None, factory=live_depen
     env = dict(os.environ if environ is None else environ)
     public = PublicOutput(env)
     session = None
+    authorization = None
 
     def write(text):
         public.check(text)
@@ -102,6 +105,8 @@ def main(argv=None, *, stdin=None, stdout=None, environ=None, factory=live_depen
                 write(DEMO_NOTICE + "\nCosts/usage are fictional.\n")
             else:
                 mode = "live"
+                if not args.live or not (stdin.isatty() and stdout.isatty()):
+                    raise LiveAuthorizationError("Live authorization was not granted. No provider work started.")
                 request, rates = read_configuration(args.request, args.rate_card)
                 public.check(request.model_dump(mode="json"))
                 public.check(rates.model_dump(mode="json"))
@@ -113,8 +118,11 @@ def main(argv=None, *, stdin=None, stdout=None, environ=None, factory=live_depen
                         safe_url(str(candidate.homepage))
             destination = ExportDestination(args.output_dir) if args.output_dir else None
             if mode == "live":
-                dependencies = factory(stack, rates, model, env)
-            session = AssessmentSession(request, dependencies)
+                authorization = authorize_live_run(request, rates, env, read=read, write=write,
+                    public=public, interactive=stdin.isatty() and stdout.isatty())
+                stack.callback(authorization.close)
+                dependencies = factory(stack, rates, model, env, authorization=authorization)
+            session = AssessmentSession(request, dependencies, authorization=authorization)
             state = run_review(session, read, write, public)
             scenario = args.scenario if mode == "demo" else None
             rendered = render_report(state, public, mode=mode, scenario=scenario)
@@ -129,6 +137,9 @@ def main(argv=None, *, stdin=None, stdout=None, environ=None, factory=live_depen
         # Summaries contain only application text and numeric accounting.
         diagnostic(message)
         return 130
+    except LiveAuthorizationError as error:
+        diagnostic(str(error))
+        return 7
     except ApplicationError as error:
         # Fixed diagnostic messages do not contain original input or paths.
         diagnostic(str(error))

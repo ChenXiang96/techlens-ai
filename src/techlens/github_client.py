@@ -25,6 +25,7 @@ from techlens.github_models import (
 )
 from techlens.github_practices import detect_repository_practices
 from techlens.models import TechnologyCandidate
+from techlens.authorization import require_authorization, GITHUB_BASE, LiveAuthorizationError
 
 GITHUB_API_BASE_URL = "https://api.github.com"
 GITHUB_API_VERSION = "2026-03-10"
@@ -173,8 +174,10 @@ class GitHubClient:
         *,
         token: str | None = None,
         http_client: httpx.Client | None = None,
+        authorization=None,
     ) -> None:
-        resolved_token = token if token is not None else os.getenv("GITHUB_TOKEN")
+        self.authorization = require_authorization(authorization)
+        resolved_token = authorization.credential("GITHUB_TOKEN", token)
         resolved_token = resolved_token.strip() if resolved_token else None
 
         self._headers = {
@@ -191,7 +194,7 @@ class GitHubClient:
         self.rate_limit_remaining: int | None = None
         self.rate_limit_reset_at: datetime | None = None
         self._owns_client = http_client is None
-        self._http_client = http_client or httpx.Client()
+        self._http_client = http_client if http_client is not None else authorization.own(httpx.Client(trust_env=False, follow_redirects=False))
 
     def close(self) -> None:
         if self._owns_client:
@@ -266,6 +269,9 @@ class GitHubClient:
         no_content_is_empty_array: bool = False,
     ) -> tuple[dict[str, Any] | list[Any] | None, httpx.Headers]:
         url = f"{GITHUB_API_BASE_URL}{path}"
+        if GITHUB_API_BASE_URL != GITHUB_BASE:
+            raise LiveAuthorizationError("GitHub endpoint differs from authorization")
+        self.authorization.github_request(self._candidate, endpoint, path, params)
         self.github_api_calls_made += 1
         transport_error: GitHubTransportError | None = None
         try:
@@ -350,6 +356,8 @@ class GitHubClient:
         collected_at: datetime | None = None,
     ) -> EngineeringSignals:
         """Collect normalized engineering facts for one GitHub candidate."""
+        self.authorization.check()
+        self._candidate = candidate.model_copy(deep=True)
         timestamp = collected_at or datetime.now(tz=UTC)
         if timestamp.tzinfo is None or timestamp.utcoffset() is None:
             raise ValueError("collected_at must be timezone-aware")
@@ -644,9 +652,10 @@ def collect_engineering_signals(
     token: str | None = None,
     http_client: httpx.Client | None = None,
     collected_at: datetime | None = None,
+    authorization=None,
 ) -> EngineeringSignals:
     """Collect GitHub facts with an optionally injected HTTP client."""
-    client = GitHubClient(token=token, http_client=http_client)
+    client = GitHubClient(token=token, http_client=http_client, authorization=authorization)
     try:
         try:
             return client.collect(candidate, collected_at=collected_at)

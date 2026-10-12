@@ -1,6 +1,7 @@
 """Checkpoint-separated provider attempts and terminal collection subgraphs."""
 import json
 from copy import deepcopy
+from contextlib import nullcontext
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
 from pydantic import ValidationError
@@ -48,7 +49,7 @@ class AnalyzerOutput(TypedDict, total=False):
     analysis_status: str
 
 
-def llm_graph(stage, adapter, executor, saver, sleep):
+def llm_graph(stage, adapter, executor, saver, sleep, authorization=None):
     graph = StateGraph(AttemptState, output_schema=PlannerOutput if stage == "planner" else AnalyzerOutput)
 
     def fail(state, reason):
@@ -65,6 +66,12 @@ def llm_graph(stage, adapter, executor, saver, sleep):
         return {"shared": shared, "number": 1, "route": "count"}
 
     def admit(state, kind):
+        if authorization:
+            authorization.check_ledger(state["budget_ledger"])
+            authorization.check(request=state["request"], rates=state["budget_ledger"].rates,
+                                run_id=state["budget_ledger"].run_id)
+            if getattr(adapter, "authorization", None) is not None:
+                authorization.before_admission(state, adapter)
         shared = state["shared"]
         payload = shared if kind == "count" else {**shared, "max_output_tokens": adapter.max_output_tokens, "store": False}
         operation = f"{stage}:count" if kind == "count" else f"{stage}:generate"
@@ -82,9 +89,12 @@ def llm_graph(stage, adapter, executor, saver, sleep):
             **state["shared"], "max_output_tokens": adapter.max_output_tokens, "store": False}
         if digest(expected) != attempt.request_digest:
             raise ValueError("Prepared request differs from reservation")
+        if authorization:
+            authorization.check_ledger(ledger)
         outcome = executor.dispatch(ledger.run_id, attempt,
             committed=lambda: reservation_committed(saver, ledger.run_id, attempt),
-            send=lambda: adapter.count(state["shared"]) if kind == "count" else adapter.generate(state["shared"]))
+            send=lambda: adapter.count(state["shared"]) if kind == "count" else adapter.generate(state["shared"]),
+            authorization=getattr(adapter, "authorization", None), adapter=adapter, ledger=ledger)
         ledger = reconcile(ledger, attempt.attempt_id, outcome)
         update = {"budget_ledger": ledger, "outcome": outcome}
         if outcome.status == "failed":
@@ -146,7 +156,7 @@ class WebOutput(TypedDict):
     budget_ledger: BudgetLedger
 
 
-def github_graph(collector):
+def github_graph(collector, authorization=None):
     graph = StateGraph(CollectionState, output_schema=GitHubOutput)
     def start(state):
         _approved_plan(state)
@@ -157,7 +167,8 @@ def github_graph(collector):
         entry = candidate_catalog(state["request"])[index]
         category, signals = None, None
         try:
-            signals = collector(candidate)
+            with authorization.github_scope(state, index) if authorization else nullcontext():
+                signals = collector(candidate)
         except GitHubRepositoryUnavailableError:
             category = "repository_unavailable"
         except GitHubAuthenticationError:
@@ -184,7 +195,7 @@ def github_graph(collector):
     return graph.compile()
 
 
-def web_graph(provider, executor, saver, sleep):
+def web_graph(provider, executor, saver, sleep, authorization=None):
     graph = StateGraph(CollectionState, output_schema=WebOutput)
     def start(state):
         _approved_plan(state)
@@ -197,6 +208,11 @@ def web_graph(provider, executor, saver, sleep):
         return {"web_outcomes": [*state["web_outcomes"], outcome], "cursor": state["cursor"] + 1,
                 "web_research_results": [*state["web_research_results"], *([result] if result else [])], "route": "next"}
     def admit(state):
+        if authorization:
+            authorization.check_ledger(state["budget_ledger"])
+            authorization.check_research(state)
+            if getattr(provider, "authorization", None) is not None:
+                authorization.before_admission(state, provider)
         tasks = state["research_plan"].web_tasks
         if state["cursor"] == len(tasks):
             return {"route": "end"}
@@ -236,8 +252,11 @@ def web_graph(provider, executor, saver, sleep):
         task = state["research_plan"].web_tasks[state["cursor"]]
         if digest(task.model_dump(mode="json")) != attempt.request_digest:
             raise ValueError("Search task differs from reservation")
+        if authorization:
+            authorization.check_ledger(ledger)
         outcome = executor.dispatch(ledger.run_id, attempt,
-            committed=lambda: reservation_committed(saver, ledger.run_id, attempt), send=lambda: send(task))
+            committed=lambda: reservation_committed(saver, ledger.run_id, attempt), send=lambda: send(task),
+            authorization=getattr(provider, "authorization", None), adapter=provider, ledger=ledger)
         ledger = reconcile(ledger, attempt.attempt_id, outcome)
         current = {**state, "budget_ledger": ledger}
         if outcome.status == "succeeded":

@@ -153,3 +153,16 @@ print(techlens.__file__)
     assert Path(evidence["python"]).resolve() == python
     assert Path(evidence["package"]).resolve().is_relative_to(python.parent.parent)
     assert not evidence["forbidden_imports"]
+
+
+@pytest.mark.parametrize("console", [False, True])
+@pytest.mark.parametrize("intent", [False, True])
+def test_installed_assess_denied_without_interactive_authorization(installed, console, intent):
+    from techlens.demo import demo_request, demo_rates
+    request, rates = installed[1] / "request.json", installed[1] / "rates.json"
+    request.write_text(demo_request("single").model_dump_json(), encoding="utf-8")
+    rates.write_text(demo_rates().model_dump_json(), encoding="utf-8")
+    args = ["assess", "--request", str(request), "--rate-card", str(rates)] + (["--live"] if intent else [])
+    result, _ = run(installed, args, console=console, decision="AUTHORIZE LIVE forged\n")
+    assert result.returncode == 7
+    assert "No provider work started" in result.stdout

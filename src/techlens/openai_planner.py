@@ -6,6 +6,7 @@ from pydantic import BaseModel, ConfigDict
 from techlens.models import NonBlankString
 from techlens.planning import PlannerConfigurationError, candidate_catalog, request_limits, validate_plan
 from techlens.openai_requests import structured_request, call_openai
+from techlens.authorization import require_authorization, OPENAI_BASE
 
 DEFAULT_MODEL = "gpt-5.6-luna"
 PLANNER_TIMEOUT_SECONDS = 30.0
@@ -33,18 +34,24 @@ class _PlannerDraft(BaseModel):
     web_tasks: list[_WebTaskDraft]
 
 class OpenAIResearchPlanner:
+    stage = "planner"
     max_output_tokens = PLANNER_MAX_OUTPUT_TOKENS
 
-    def __init__(self, *, api_key=None, model=None, http_client=None):
-        key = api_key if api_key is not None else os.getenv("OPENAI_API_KEY")
+    def __init__(self, *, api_key=None, model=None, http_client=None, authorization=None):
+        self.authorization = require_authorization(authorization)
+        key = authorization.credential("OPENAI_API_KEY", api_key)
         if not key or not key.strip():
             raise PlannerConfigurationError("OPENAI_API_KEY is required")
-        self.model = (model if model is not None else os.getenv("OPENAI_MODEL", DEFAULT_MODEL)).strip()
+        self.model = (model if model is not None else authorization.model).strip()
         if not self.model:
             raise PlannerConfigurationError("OpenAI model must be nonblank")
         self._owns_client = http_client is None
+        authorization.register_provider(self, self.stage, self.model)
+        transport = http_client if http_client is not None else authorization.own(
+            httpx.Client(follow_redirects=False, trust_env=False))
         self._client = openai.OpenAI(api_key=key.strip(), max_retries=0, timeout=30.0,
-            http_client=http_client or httpx.Client(follow_redirects=False), _strict_response_validation=True)
+            base_url=OPENAI_BASE, organization="", project="",
+            http_client=transport, _strict_response_validation=True)
 
     def close(self):
         if self._owns_client:
@@ -65,10 +72,10 @@ class OpenAIResearchPlanner:
         return structured_request(self.model, PLANNER_INSTRUCTIONS, data, _PlannerDraft)
 
     def count(self, shared):
-        return call_openai(self._client, shared)
+        return call_openai(self._client, shared, provider=self)
 
     def generate(self, shared):
-        return call_openai(self._client, shared, schema_type=_PlannerDraft, max_output_tokens=self.max_output_tokens)
+        return call_openai(self._client, shared, schema_type=_PlannerDraft, max_output_tokens=self.max_output_tokens, provider=self)
 
     def finalize(self, content, request):
         content = _PlannerDraft.model_validate(content).model_dump()

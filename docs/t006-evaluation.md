@@ -1,5 +1,18 @@
 # T-006A: offline evidence-evaluation harness
 
+## T-008 reviewed contract-provenance refresh
+
+The T-008 authorization-only changes update the `graph.py` and `execution.py`
+production contract hashes in the manifest and embedded JSON provenance, including
+the derived manifest digest. `source_commit="dd2441e"` remains the fixture-origin
+commit, not the commit containing T-008. Source bundles, cases, samples, labels,
+prompt/schema digests, scorer, rubric and dataset version are unchanged. Field-level
+comparison against the accepted baseline found identical observations, per-layer
+outcomes, boundary traces, call/accounting inventories and aggregate metrics.
+The Markdown baseline is unchanged. This refresh establishes no live-model evidence.
+The F-01 follow-up refresh covers live command-input rejection and immutable
+ledger-allowance checks only; fixture expectations and observations remain unchanged.
+
 This is a **harness self-test / fixture-only** dataset, not a validated benchmark.
 It contains 26 synthetic cases, 52 canned control/defect outputs, three reusable
 source profiles, and separate proposed reference labels. No fixture is human-adjudicated.

@@ -1,5 +1,10 @@
 # TechLens AI
 
+T-008 adds default-deny live authorization. Local commands and demos require no
+permission. `assess --live` requests exact run-specific interactive consent before
+client construction or paid planning; research-plan approval remains a separate gate.
+See [live authorization and library compatibility](docs/live-authorization.md).
+
 TechLens assesses one to three original GitHub-hosted technologies for one shared team context. T-005 adds deterministic risk observations, structured adoption analysis, citation checks, a typed 13-section report, and per-run budget admission.
 
 Evidence integrity, citation integrity, and semantic support are different. This pipeline validates the first two. A cited statement is not automatically true, credible, or semantically supported.

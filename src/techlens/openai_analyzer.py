@@ -18,10 +18,11 @@ supported sections 3 through 8 in ascending order. Application risk flags cannot
 
 
 class OpenAIAdoptionAnalyzer(OpenAIResearchPlanner):
+    stage = "analyzer"
     max_output_tokens = 8192
 
     def prepare(self, envelope):
         return structured_request(self.model, ANALYZER_INSTRUCTIONS, envelope, AnalysisDraft)
 
     def generate(self, shared):
-        return call_openai(self._client, shared, schema_type=AnalysisDraft, max_output_tokens=self.max_output_tokens)
+        return call_openai(self._client, shared, schema_type=AnalysisDraft, max_output_tokens=self.max_output_tokens, provider=self)

@@ -207,21 +207,24 @@ def test_provider_failure_is_accounted_and_report_is_partial(branch):
 
 def test_real_t002_collector_reused_after_approval(github_candidate, github_payloads, fixed_now):
     from test_github_client import make_scenario_handler
+    from authorization_helpers import grant
 
     requests = []
     handler = make_scenario_handler(github_payloads, requests)
     request = make_request()
     request.candidates = [github_candidate]
+    auth = grant(request)
+    config = {"configurable": {"thread_id": auth.run_id}}
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
         def collector(candidate):
             assert candidate == github_candidate
-            return collect_engineering_signals(candidate, http_client=client, collected_at=fixed_now)
+            return collect_engineering_signals(candidate, http_client=client, collected_at=fixed_now, authorization=auth)
 
         graph = build_test_graph(planner=FakePlanner(), search_provider=FakeSearchProvider(),
-                                    github_collector=collector)
-        graph.invoke({"request": request}, CONFIG)
+                                    github_collector=collector, authorization=auth)
+        graph.invoke({"request": request}, config)
         assert requests == []
-        result = graph.invoke(Command(resume={"action": "approve"}), CONFIG)
+        result = graph.invoke(Command(resume={"action": "approve"}), config)
     signals = result["github_signals"][0]
     assert signals.candidate_id == "candidate-001"
     assert signals.candidate_name == github_candidate.name

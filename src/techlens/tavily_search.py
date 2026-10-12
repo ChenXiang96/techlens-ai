@@ -6,6 +6,7 @@ import httpx
 from pydantic import ValidationError
 
 from techlens.models import WebResearchTask
+from techlens.authorization import require_authorization
 from techlens.research_models import WebResearchTaskResult, WebSearchResult
 from techlens.search import (
     SearchAuthenticationError,
@@ -23,13 +24,15 @@ TAVILY_TIMEOUT_SECONDS = 10.0
 
 
 class TavilySearchProvider:
-    def __init__(self, *, api_key: str | None = None, http_client: httpx.Client | None = None):
-        key = api_key if api_key is not None else os.getenv("TAVILY_API_KEY")
+    def __init__(self, *, api_key: str | None = None, http_client: httpx.Client | None = None, authorization=None):
+        self.authorization = require_authorization(authorization)
+        key = authorization.credential("TAVILY_API_KEY", api_key)
         if not key or not key.strip():
             raise SearchConfigurationError("TAVILY_API_KEY is required")
         self._headers = {"Authorization": f"Bearer {key.strip()}"}
         self._owns_client = http_client is None
-        self._client = http_client or httpx.Client()
+        self._client = http_client if http_client is not None else authorization.own(httpx.Client(trust_env=False, follow_redirects=False))
+        authorization.register_provider(self, "web")
 
     def close(self) -> None:
         if self._owns_client:
@@ -43,6 +46,7 @@ class TavilySearchProvider:
 
     def search(self, task: WebResearchTask) -> WebResearchTaskResult:
         task = WebResearchTask.model_validate(task.model_dump())
+        self.authorization.consume(self, f"web:{task.task_id}", task.model_dump(mode="json"), TAVILY_SEARCH_URL)
         failure: SearchError | None = None
         result = None
         try:

@@ -1,6 +1,7 @@
 """Process-local at-most-once dispatch; accounting lives only in checkpoints."""
 from copy import deepcopy
 from threading import Lock
+from contextlib import nullcontext
 from techlens.budget import AttemptOutcome, BudgetLedger
 
 
@@ -42,7 +43,9 @@ class AttemptExecutor:
             if key not in self._slots and admission.ledger.run_id not in self._restored_runs:
                 self._slots[key] = ["READY", admission.attempt.request_digest, None]
 
-    def dispatch(self, run_id, attempt, *, committed, send):
+    def dispatch(self, run_id, attempt, *, committed, send, authorization=None, adapter=None, ledger=None):
+        if authorization:
+            authorization.check_ledger(ledger)
         if not committed():
             raise ExecutionBlocked("Matching reservation has not been committed")
         key = (run_id, attempt.attempt_id)
@@ -56,7 +59,9 @@ class AttemptExecutor:
                 raise ExecutionBlocked("Original attempt remains in flight; resume later")
             slot[0] = "IN_FLIGHT"
         try:
-            outcome = send()
+            scope = authorization._paid_scope(self, run_id, attempt, adapter) if authorization else nullcontext()
+            with scope:
+                outcome = send()
             outcome = AttemptOutcome.model_validate(outcome.model_dump())
             with self._lock:
                 slot[2] = outcome.model_copy(deep=True)
@@ -68,7 +73,7 @@ class AttemptExecutor:
                     slot[0] = "AMBIGUOUS"
 
 
-def reservation_committed(saver, run_id, attempt):
+def reservation_committed(saver, run_id, attempt, *, authorization=None):
     """Read actual saver records; an in-memory READY slot is not a commit."""
     for checkpoint in saver.list({"configurable": {"thread_id": run_id}}):
         raw = checkpoint.checkpoint["channel_values"].get("budget_ledger")
@@ -76,5 +81,7 @@ def reservation_committed(saver, run_id, attempt):
             continue
         ledger = BudgetLedger.model_validate(raw.model_dump() if isinstance(raw, BudgetLedger) else raw)
         if ledger.run_id == run_id and any(a == attempt for a in ledger.attempts):
+            if authorization:
+                authorization.check_ledger(ledger)
             return True
     return False

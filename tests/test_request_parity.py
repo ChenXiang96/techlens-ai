@@ -6,6 +6,7 @@ from test_analysis import scenario
 from test_openai_planner import response_for, draft_for, TOKEN
 from techlens.openai_planner import OpenAIResearchPlanner
 from techlens.openai_analyzer import OpenAIAdoptionAnalyzer
+from authorization_helpers import planner as authorized_planner, run_llm
 
 
 @pytest.mark.parametrize("kind", ["planner", "analyzer"])
@@ -18,11 +19,13 @@ def test_actual_count_and_generation_json_share_every_token_relevant_field(kind)
             return httpx.Response(200, json={"object": "response.input_tokens", "input_tokens": 100})
         return httpx.Response(200, json=response_for(draft if kind == "analyzer" else draft_for(request)))
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        provider = (OpenAIAdoptionAnalyzer if kind == "analyzer" else OpenAIResearchPlanner)(api_key=TOKEN, http_client=client)
+        provider = authorized_planner(OpenAIAdoptionAnalyzer if kind == "analyzer" else OpenAIResearchPlanner,
+            api_key=TOKEN, http_client=client, request=request)
         shared = provider.prepare(envelope if kind == "analyzer" else request)
         shared["reasoning"] = {"effort": "low"}
-        assert provider.count(shared).status == "succeeded"
-        assert provider.generate(shared).status == "succeeded"
+        outcomes = run_llm(provider, shared, request, kind="both")
+        assert outcomes["count"].status == "succeeded"
+        assert outcomes["generate"].status == "succeeded"
     assert [path for path, _ in bodies] == ["/v1/responses/input_tokens", "/v1/responses"]
     counted, generated = bodies[0][1], bodies[1][1]
     assert set(generated) - set(counted) == {"max_output_tokens", "store"}
@@ -55,10 +58,10 @@ def test_analyzer_boundaries_return_only_sanitized_fields(stage, category, caplo
         status = {"authentication": 401, "rate_limit": 429, "quota": 429, "server": 503}[category]
         code = "insufficient_quota" if category == "quota" else "rate_limit_exceeded" if category == "rate_limit" else "error"
         return httpx.Response(status, json={"error": {"message": TOKEN, "code": code}}, headers={"retry-after": "999"})
-    _, _, _, envelope, _ = scenario()
+    assessment, _, _, envelope, _ = scenario()
     with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        provider = OpenAIAdoptionAnalyzer(api_key=TOKEN, http_client=client)
-        outcome = getattr(provider, stage)(provider.prepare(envelope))
+        provider = authorized_planner(OpenAIAdoptionAnalyzer, api_key=TOKEN, http_client=client, request=assessment)
+        outcome = run_llm(provider, provider.prepare(envelope), assessment, kind=stage)[stage]
     assert len(calls) == 1 and outcome.category == category
     assert outcome.retry_after is None or outcome.retry_after <= 5
     serialized = outcome.model_dump_json() + repr(vars(outcome)) + caplog.text

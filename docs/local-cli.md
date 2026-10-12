@@ -49,11 +49,13 @@ Inherited tracing and provider debug logging are disabled during application exe
 
 ```text
 techlens doctor --request request.json --rate-card rates.json
-techlens assess --request request.json --rate-card rates.json --output-dir new-live-report
+techlens assess --live --request request.json --rate-card rates.json --output-dir new-live-report
 ```
 
-`assess` is explicit live mode and requires interactive stdin/stdout. It refuses
-noninteractive use before constructing clients. Doctor never constructs clients or
+`--live` requests interactive consent, not automatic permission. Exact run-specific
+acceptance is required before clients or counting/planning; research-plan approval
+is a separate later gate. Missing consent/noninteractive use returns exit code 7.
+See [Live authorization](live-authorization.md). Doctor never constructs clients or
 checks keys online. Missing live configuration does not prevent the default demo.
 
 The rate-card template is deliberately NON-EXECUTABLE. Supply caller-trusted USD

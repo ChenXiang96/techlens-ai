@@ -8,7 +8,7 @@ from langgraph.types import Command
 from techlens.github_client import collect_engineering_signals
 from techlens.models import AssessmentRequest
 from techlens.nodes import validate_request, human_review
-from techlens.planning import validate_plan, PlanReviewError
+from techlens.planning import validate_plan, PlanReviewError, PlannerError
 from techlens.state import TechLensState
 from techlens.execution import AttemptExecutor, ExecutionBlocked
 from techlens.budget import BudgetLedger
@@ -19,6 +19,10 @@ from techlens.analysis import project_evidence, finalize_analysis, AnalysisValid
 from techlens.reporting import assemble_report, validate_report, report_status
 from techlens.report_models import RunMetrics
 from techlens.workflow import llm_graph, github_graph, web_graph
+from techlens.authorization import LiveAuthorizationError
+from contextlib import nullcontext
+from pydantic import ValidationError
+from techlens.research_models import PlanReviewDecision
 
 
 class _AssessmentInput(TypedDict):
@@ -27,7 +31,8 @@ class _AssessmentInput(TypedDict):
 
 class AssessmentGraph:
     """Retain this runner, its executor and its saver for same-process resume."""
-    def __init__(self, graph, executor):
+    def __init__(self, graph, executor, authorization=None):
+        self.authorization = authorization
         self._graph, self.executor = graph, executor
         self.checkpointer = graph.checkpointer
 
@@ -38,11 +43,40 @@ class AssessmentGraph:
         return self._graph.get_graph(**kwargs)
 
     def update_state(self, *args, **kwargs):
+        if self.authorization:
+            raise LiveAuthorizationError("Live state editing is not supported; use plan review")
         return self._graph.update_state(*args, **kwargs)
 
     def _head(self, config):
         snapshot = self._graph.get_state(config)
         return snapshot.config["configurable"].get("checkpoint_id") if snapshot.config else None
+
+    def _live_input(self, value, config, head):
+        """Validate public controls before LangGraph can apply command writes."""
+        if value is None and head:
+            return None  # Same-process checkpoint reconciliation, not new permission.
+        if not head and type(value) is dict and set(value) == {"request"}:
+            request = AssessmentRequest.model_validate(value["request"])
+            self.authorization.check(request=request)
+            return {"request": request}
+        if (type(value) is not Command or not head or value.update is not None
+                or value.graph is not None or value.goto != ()):
+            raise LiveAuthorizationError("Unsupported live invocation controls")
+        snapshot = self.get_state(config)
+        if not any(task.name == "human_review" and task.interrupts for task in snapshot.tasks):
+            raise LiveAuthorizationError("Live review requires the pending review interrupt")
+        invalid = False
+        try:
+            raw = value.resume.model_dump() if isinstance(value.resume, PlanReviewDecision) else value.resume
+            decision = PlanReviewDecision.model_validate(raw)
+            if decision.action != "reject":
+                validate_plan(decision.modified_plan if decision.action == "modify"
+                              else snapshot.values["research_plan"], snapshot.values["request"])
+        except (ValidationError, ValueError, TypeError, PlannerError):
+            invalid = True
+        if invalid:
+            raise PlanReviewError("Invalid plan review; no research authorized")
+        return Command(resume=decision.model_dump())
 
     def stream(self, value, config=None, **kwargs):
         config = dict(config or {})
@@ -55,7 +89,13 @@ class AssessmentGraph:
         config["configurable"] = configurable
         config.setdefault("recursion_limit", 1000)
         head = self._head(config)
+        if self.authorization:
+            self.authorization.check(run_id=thread)
+            value = self._live_input(value, config, head)
+            if head and thread not in self.executor._heads:
+                raise LiveAuthorizationError("Restored checkpoints cannot establish live permission")
         self.executor.enter_run(thread, head)
+        completed = False
         try:
             if head and value is not None and not isinstance(value, Command):
                 raise ExecutionBlocked("An existing run cannot be initialized again")
@@ -63,9 +103,18 @@ class AssessmentGraph:
                 raise ValueError("No assessment request is available for this thread")
             if kwargs.pop("durability", "sync") != "sync":
                 raise ExecutionBlocked("Synchronous checkpoints are required")
-            yield from self._graph.stream(value, config, durability="sync", **kwargs)
+            from techlens.application import private_execution
+            with private_execution() if self.authorization else nullcontext():
+                yield from self._graph.stream(value, config, durability="sync", **kwargs)
+            completed = True
+        except (KeyboardInterrupt, GeneratorExit):
+            if self.authorization:
+                self.authorization.close()
+            raise
         finally:
             self.executor.leave_run(thread, self._head(config))
+            if self.authorization and completed and not self.get_state(config).next:
+                self.authorization.close()
 
     def invoke(self, value, config=None, **kwargs):
         for _ in self.stream(value, config, stream_mode="values", **kwargs):
@@ -80,9 +129,15 @@ class AssessmentGraph:
 
 def build_graph(*, planner, search_provider, github_collector=collect_engineering_signals,
                 analyzer=None, rates=None, checkpointer=None, executor=None,
-                sleep=real_sleep, clock=lambda: datetime.now(UTC)):
+                sleep=real_sleep, clock=lambda: datetime.now(UTC), authorization=None):
     saver = checkpointer if checkpointer is not None else InMemorySaver()
     executor = executor if executor is not None else AttemptExecutor()
+    for provider in (planner, analyzer, search_provider, github_collector):
+        bound = getattr(provider, "authorization", None)
+        if bound is not None and bound is not authorization:
+            raise LiveAuthorizationError("Live provider requires its owning runtime")
+    if authorization:
+        authorization.bind(executor, saver, rates)
     graph = StateGraph(TechLensState, input_schema=_AssessmentInput)
 
     def initialize(state, config):
@@ -99,6 +154,8 @@ def build_graph(*, planner, search_provider, github_collector=collect_engineerin
         if state["plan_status"] == "rejected":
             return ["generate_report"]
         if state["plan_status"] in {"approved", "modified"}:
+            if authorization:
+                authorization._attest_review(state)
             return ["collect_github", "web_research"]
         raise PlanReviewError("Research requires human approval")
 
@@ -216,16 +273,16 @@ def build_graph(*, planner, search_provider, github_collector=collect_engineerin
         return {"run_metrics": metrics, "report": final_report}
 
     graph.add_node("validate_request", initialize)
-    graph.add_node("plan_research", llm_graph("planner", planner, executor, saver, sleep))
+    graph.add_node("plan_research", llm_graph("planner", planner, executor, saver, sleep, authorization))
     graph.add_node("human_review", human_review)
-    graph.add_node("collect_github", github_graph(github_collector))
-    graph.add_node("web_research", web_graph(search_provider, executor, saver, sleep))
+    graph.add_node("collect_github", github_graph(github_collector, authorization))
+    graph.add_node("web_research", web_graph(search_provider, executor, saver, sleep, authorization))
     graph.add_node("research_complete", join)
     graph.add_node("normalize_evidence", normalize_evidence)
     graph.add_node("validate_evidence", validate_evidence)
     graph.add_node("apply_risk_rules", risks)
     graph.add_node("project_analysis", projection)
-    graph.add_node("analyze_adoption", llm_graph("analyzer", analyzer, executor, saver, sleep))
+    graph.add_node("analyze_adoption", llm_graph("analyzer", analyzer, executor, saver, sleep, authorization))
     graph.add_node("validate_analysis", validate_analysis)
     graph.add_node("generate_report", report)
     graph.add_node("finalize_metrics", finalize)
@@ -246,4 +303,4 @@ def build_graph(*, planner, search_provider, github_collector=collect_engineerin
     graph.add_edge("validate_analysis", "generate_report")
     graph.add_edge("generate_report", "finalize_metrics")
     graph.add_edge("finalize_metrics", END)
-    return AssessmentGraph(graph.compile(checkpointer=saver), executor)
+    return AssessmentGraph(graph.compile(checkpointer=saver), executor, authorization)

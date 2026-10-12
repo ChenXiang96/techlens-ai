@@ -23,9 +23,8 @@ def search_response():
 
 
 def run_search(handler):
-    with httpx.Client(transport=httpx.MockTransport(handler)) as client:
-        provider = TavilySearchProvider(api_key=TOKEN, http_client=client)
-        return provider.search(make_plan(make_request()).web_tasks[0])
+    from authorization_helpers import search_once
+    return search_once(handler, TOKEN)
 
 
 def assert_safe(error, caplog):
@@ -144,15 +143,15 @@ def test_invalid_result_fields_fail(field, value):
 
 
 def test_credentials_configuration_and_override(monkeypatch):
-    with pytest.raises(SearchConfigurationError):
+    from techlens.authorization import LiveAuthorizationError
+    from authorization_helpers import search_once
+    with pytest.raises(LiveAuthorizationError):
         TavilySearchProvider()
     monkeypatch.setenv("TAVILY_API_KEY", TOKEN)
     seen = []
-    with httpx.Client(transport=httpx.MockTransport(
-        lambda r: (seen.append(r.headers["authorization"]) or httpx.Response(200, json={"results": []}))
-    )) as client:
-        TavilySearchProvider(http_client=client).search(make_plan(make_request()).web_tasks[0])
-        TavilySearchProvider(api_key="explicit-fake-sentinel", http_client=client).search(make_plan(make_request()).web_tasks[0])
+    handler = lambda r: (seen.append(r.headers["authorization"]) or httpx.Response(200, json={"results": []}))
+    search_once(handler, TOKEN)
+    search_once(handler, "explicit-fake-sentinel")
     assert seen == [f"Bearer {TOKEN}", "Bearer explicit-fake-sentinel"]
-    with pytest.raises(SearchConfigurationError):
+    with pytest.raises(LiveAuthorizationError):
         TavilySearchProvider(api_key="   ")

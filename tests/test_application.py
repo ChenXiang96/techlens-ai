@@ -140,6 +140,8 @@ def test_interrupted_paid_attempt_is_not_replayed():
 
 @pytest.mark.parametrize("fail_at", [None, 1, 2, 3])
 def test_http_ownership_even_partial_adapter_construction(monkeypatch, fail_at):
+    from authorization_helpers import grant
+    from techlens.authorization import LiveAuthorizationError
     import techlens.openai_planner as planner
     import techlens.openai_analyzer as analyzer
     import techlens.tavily_search as tavily
@@ -160,14 +162,16 @@ def test_http_ownership_even_partial_adapter_construction(monkeypatch, fail_at):
             raise RuntimeError("sentinel-private")
         return object()
 
-    monkeypatch.setattr(planner, "OpenAIResearchPlanner", construct)
-    monkeypatch.setattr(analyzer, "OpenAIAdoptionAnalyzer", construct)
+    from unittest.mock import Mock
+    monkeypatch.setattr(planner, "OpenAIResearchPlanner", Mock(side_effect=construct, max_output_tokens=4096))
+    monkeypatch.setattr(analyzer, "OpenAIAdoptionAnalyzer", Mock(side_effect=construct, max_output_tokens=8192))
     monkeypatch.setattr(tavily, "TavilySearchProvider", construct)
     try:
         with ExitStack() as stack:
+            auth = grant(demo_request("single"), demo_rates())
             live_dependencies(stack, demo_rates(), "synthetic-local",
-                {"OPENAI_API_KEY": "sentinel", "TAVILY_API_KEY": "sentinel"}, client_factory=Client)
-    except RuntimeError:
+                {"OPENAI_API_KEY": "sentinel", "TAVILY_API_KEY": "sentinel"}, client_factory=Client, authorization=auth)
+    except LiveAuthorizationError:
         assert fail_at is not None
     assert clients and all(c.closed for c in clients)
 

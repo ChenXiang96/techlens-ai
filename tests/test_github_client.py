@@ -17,6 +17,7 @@ from techlens.github_models import EngineeringSignals
 from techlens.models import TechnologyCandidate
 
 Handler = Callable[[httpx.Request], httpx.Response]
+from authorization_helpers import collect_engineering_signals
 
 
 def make_scenario_handler(
