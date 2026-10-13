@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>TechLens — Offline Local MVP</title><link rel="stylesheet" href="/app.css">
+  <script defer src="/app.js"></script>
+</head>
+<body>
+<header><span class="brand">TechLens <span class="badge">LOCAL · OFFLINE</span></span>
+  <h1>Evidence, with its limits intact.</h1>
+  <p>Prepare an assessment request, or explore a supervised synthetic demonstration.</p>
+</header>
+<main>
+  <aside class="notice">SYNTHETIC DEMO — no real research or model assessment. Prices and usage are fictional.
+    No browser live execution. Prepared requests are never attached to canned results.</aside>
+  <p id="message" role="status" aria-live="polite"></p>
+  <p id="action-status" role="status" aria-live="polite">No submission in progress.</p>
+  <nav aria-label="Journeys"><button id="request-tab" aria-pressed="true">Prepare request</button>
+    <button id="demo-tab" aria-pressed="false">Explore demo</button></nav>
+  <section id="request-journey" aria-labelledby="request-heading">
+    <h2 id="request-heading">Prepare a request</h2>
+    <p>Local validation only. Defaults: USD 0, one research round, two searches. A positive budget grants no permission.
+      Requested round ceiling may be two; this MVP executes at most one round.</p>
+    <form id="request-form">
+      <label>Assessment ID (optional)<input id="assessment-id" maxlength="128" autocomplete="off"></label>
+      <div id="candidate-cards"></div><button type="button" id="add-candidate">Add candidate (maximum 3)</button>
+      <h3>Team context <span class="muted">optional; blanks stay unknown</span></h3>
+      <label>Team size<input id="team-size" inputmode="numeric" maxlength="9"></label>
+      <div id="context-lists"></div><div id="context-descriptions"></div>
+      <div class="grid">
+        <label>Maximum research rounds<select id="rounds"><option>1</option><option>2</option></select></label>
+        <label>Maximum web searches<select id="searches"><option>1</option><option selected>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+        <label>Maximum run cost USD (exact decimal)<input id="budget" value="0" maxlength="32" inputmode="decimal"></label>
+      </div>
+      <button type="submit" class="primary">Validate and prepare request</button>
+    </form>
+    <section id="prepared" hidden><h3>Prepared request</h3><p>This prepares input; no repository has been researched.</p>
+      <div id="prepared-summary"></div><button id="download-request">Download request JSON</button>
+      <p class="muted">Your browser controls saving and overwrite prompts; the server writes no file.</p></section>
+  </section>
+  <section id="demo-journey" hidden aria-labelledby="demo-heading">
+    <h2 id="demo-heading">Explore a synthetic demo</h2>
+    <p>Package-owned fictional candidates only. The real local workflow pauses for your plan review.</p>
+    <label>Scenario<select id="scenario"><option value="single">Single candidate</option>
+      <option value="comparison">Two-candidate comparison</option><option value="partial">Partial retrieval</option></select></label>
+    <button id="start-demo" class="primary">Start new synthetic demo</button>
+    <label>Retained runs (this process only)<select id="run-picker"><option value="">Choose a retained run</option></select></label>
+    <p id="lifecycle" role="status"></p>
+    <button id="refresh-run">Refresh retained state</button><button id="retry-action">Retry last submitted action</button>
+    <button id="abandon-run" hidden>Abandon run (no automatic replay)</button>
+    <section id="plan-panel" hidden><h3>Research plan · review pending</h3>
+      <p>Viewing, editing and previewing do not approve research. Candidate IDs, repositories, task IDs and limits stay application-owned.</p>
+      <div id="plan-display"></div>
+      <button id="download-plan">Download plan JSON</button><button id="edit-plan">Edit planning content</button>
+      <button id="approve-plan" class="primary">Approve original plan</button><button id="reject-plan">Reject plan</button>
+      <form id="plan-editor" hidden>
+        <label>Objective<textarea id="edit-objective" maxlength="8192" required></textarea></label>
+        <div id="edit-questions"></div><div id="edit-checks"></div><div id="edit-tasks"></div>
+        <button type="button" id="add-task">Add web task</button>
+        <button type="submit" class="primary">Validate and preview changes</button>
+      </form>
+      <section id="proposal-panel" hidden><h4>Stored proposal · not approval</h4><div id="proposal-diff"></div>
+        <button id="apply-proposal" class="primary">APPLY stored proposal</button><button id="cancel-proposal">CANCEL proposal</button></section>
+    </section>
+    <section id="report-panel" hidden><h3 id="report-heading">Validated report</h3>
+      <p>Citations establish traceability, not factual truth or semantic entailment. Missing context is unknown, not zero.
+        Attempts are admitted, not confirmed transport. Outstanding liability is estimated, not an invoice. Elapsed time includes human wait.</p>
+      <button id="report-toggle" aria-pressed="false">Show full report</button><div id="report-display"></div>
+      <div id="downloads"></div><button id="retry-artifacts" hidden>Retry report downloads only</button>
+    </section>
+  </section>
+</main>
+<footer>Process-local only · Restart loses runs · Closing a tab neither approves nor cancels work · No automatic replay</footer>
+</body></html>

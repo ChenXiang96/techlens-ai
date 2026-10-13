@@ -29,6 +29,8 @@ def parser():
     root = Parser(prog="techlens", description="Local supervised technology assessment. Demo needs no credentials.")
     root.add_argument("--version", action="version", version="techlens " + version("techlens"))
     commands = root.add_subparsers(dest="command", required=True, parser_class=Parser)
+    ui = commands.add_parser("ui", help="Loopback-only offline browser interface; no live execution")
+    ui.add_argument("--port", type=int, default=None, help="Local port (1-65535); omitted selects an available port")
     doctor = commands.add_parser("doctor", help="Local checks only; never verify keys or prices online")
     doctor.add_argument("--request")
     doctor.add_argument("--rate-card")
@@ -97,6 +99,12 @@ def main(argv=None, *, stdin=None, stdout=None, environ=None, factory=live_depen
             write(help_output.getvalue())
             return help_code
         with private_execution(), ExitStack() as stack:
+            if args.command == "ui":
+                if args.port is not None and not 1 <= args.port <= 65535:
+                    raise ApplicationError("Invalid local UI port.")
+                from techlens.ui_server import serve
+                serve(args.port or 0, env, write)
+                return 0
             if args.command == "request":
                 phase = "request"
                 if not (stdin.isatty() and stdout.isatty()):

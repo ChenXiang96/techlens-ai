@@ -129,3 +129,13 @@ See [the local CLI guide](docs/local-cli.md) for live configuration gates, reque
 examples, installation verification, safe exports, exit codes and limitations.
 No production count-price basis is supplied; live billing and provider behavior
 remain NOT VERIFIED. T-006A is a separate offline evaluation harness, not the demo.
+
+## Offline local browser interface
+
+Run `techlens ui` (or `python -m techlens ui`), then manually open the printed
+127.0.0.1 URL. Optional `--port 8765` selects a fixed local port. Prepare/download
+requests separately from package-owned synthetic single/comparison/partial demos.
+Review, approve/reject, or preview and explicitly apply plan edits. Reports and
+canonical JSON/Markdown/ZIP downloads retain the accepted validation contracts.
+No live browser execution, provider calls, new dependency or persistent recovery.
+See [local UI guide](docs/local-ui.md) for security, lifecycle, bounds and limits.
