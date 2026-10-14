@@ -1,7 +1,13 @@
 # Local visual interface
 
+For exact user actions and expected results, see [the offline walkthrough](offline-walkthrough.md).
+
 Run `techlens ui` or `python -m techlens ui`. The default selects an available
 port. `techlens ui --port 8765` requests that specific port (1–65535).
+Automatic selection uses 49152–65535 with at most eight local bind attempts on
+address collisions. This avoids service ports rejected by the tested browsers
+(an OS-selected 6667 was reproduced). Explicit ports are never silently changed;
+browser restrictions still apply. Permission failures are not retried.
 The server binds numeric **127.0.0.1 only**. Open the printed URL manually in a
 local browser. It does not open a browser or make any provider request on launch.
 

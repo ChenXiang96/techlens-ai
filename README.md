@@ -139,3 +139,4 @@ Review, approve/reject, or preview and explicitly apply plan edits. Reports and
 canonical JSON/Markdown/ZIP downloads retain the accepted validation contracts.
 No live browser execution, provider calls, new dependency or persistent recovery.
 See [local UI guide](docs/local-ui.md) for security, lifecycle, bounds and limits.
+For step-by-step offline testing, use the [offline walkthrough](docs/offline-walkthrough.md).

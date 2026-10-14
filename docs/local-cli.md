@@ -1,5 +1,8 @@
 # Local CLI MVP
 
+The [offline walkthrough](offline-walkthrough.md) covers the existing local environment
+and browser journeys without installing prerequisites or issuing live permission.
+
 The CLI wraps the existing supervised, budgeted, one-round graph. It does not
 establish live API availability, price authority, semantic correctness, or production readiness.
 

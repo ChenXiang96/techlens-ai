@@ -316,3 +316,25 @@ def test_coherent_plan_snapshot_replacement_rejects_stale_apply_without_resume(l
     assert len(scheduler.calls) == 1
     scheduler.finish()
     assert c.runs[rid].state["research_plan"].objective == "Replacement B"
+
+
+def test_action_capacity_keeps_consumed_receipts_and_publishes_no_new_work(local):
+    c, owner, scheduler = local
+    payload = {"candidates": [{"name": "Capacity request", "repository_url": "https://github.com/example/project"}]}
+    original = None
+    for _ in range(64):
+        try:
+            submitted = action(c, owner, "prepare", payload=payload)
+        except UIError as error:
+            assert "capacity" in str(error)
+            break
+        receipt = c.act(owner, "prepare", "owner", submitted)
+        if original is None:
+            original = submitted, receipt
+    else:
+        pytest.fail("Unchanged action cap was not enforced")
+    assert len(c.tickets) == 64
+    before = c.owners[owner].prepared
+    assert c.act(owner, "prepare", "owner", original[0]) == original[1]
+    assert c.owners[owner].prepared is before
+    assert not c.runs and not scheduler.calls and c.jobs == 0

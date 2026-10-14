@@ -1,7 +1,9 @@
 """Small loopback-only HTTP boundary with bounded reads before parsing/effects."""
 from http.cookies import SimpleCookie
 from importlib.resources import files
+import errno
 import re
+import secrets
 import socket
 import socketserver
 from threading import BoundedSemaphore
@@ -233,6 +235,21 @@ class LocalServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = False
     block_on_close = True
     request_queue_size = 8
+
+    def server_bind(self):
+        if self.server_address[1] != 0:
+            return super().server_bind()  # Explicit ports never silently change.
+        # OS port=0 may select browser-blocked service ports (observed: 6667).
+        # Use the dynamic/private range, above the known restricted service ports.
+        # Bound local collision handling; never retry permission/other failures.
+        for _ in range(8):
+            self.server_address = ("127.0.0.1", 49152 + secrets.randbelow(16384))
+            try:
+                return super().server_bind()
+            except OSError as error:
+                if error.errno not in {errno.EADDRINUSE, 10048}:
+                    raise
+        raise OSError(errno.EADDRINUSE, "No automatic loopback port available")
 
     def __init__(self, port, coordinator, *, read_deadline=15, inactivity=5):
         if type(port) is not int or not 0 <= port <= 65535:

@@ -1,0 +1,780 @@
+{
+  "schema_version": "techlens-t011-acceptance-v1",
+  "date": "2026-10-14",
+  "timezone": "America/St_Johns",
+  "baseline_commit": "1a11ef7c46e9fa8de0c0008ac3c7cd5d382d4a2d",
+  "commit_created": false,
+  "master_acceptance": "FINAL PASS",
+  "master_acceptance_date": "2026-10-14",
+  "master_acceptance_provenance": {
+    "source": "User-supplied TechLens AI — T-011 Master Acceptance Review dated 2026-10-14",
+    "scope": "Recorded offline Windows/Python3.12/Chrome/Edge scope; not public-release or real-provider approval",
+    "independent_focused_tests": {"passed": 73, "failed": 0, "skipped": 0},
+    "execution_limits": "Master did not rerun the full 917-test suite, native ConPTY scenarios or browser interactions; those executions remain Codex evidence and are not summed with Master tests"
+  },
+  "execution_scope": "offline synthetic only",
+  "wheel_sha256": "dc0adb41522af48fd4096c69ae9faa72326b72132867f334404b28785207e175",
+  "tested_runtime_member_count": 47,
+  "runtime_member_sha256": {
+    "techlens/analysis.py": "c87d702c23aa275cf5967a2b40493cc8124f6aa34275a7b4820277c8b4d54431",
+    "techlens/analysis_models.py": "5a23bfe04ad5667ddd7bc24b977f6e68599f66cc78df66823a087f1ac855948d",
+    "techlens/application.py": "48f594dbabbb50c64e73ba24acbda2fef065d0777f54b02ecfe536c9d244a94c",
+    "techlens/authorization.py": "7ef29771d2ee1592a6dd645f1e0ff98477070cb14d7055af3ab0195139ad8f13",
+    "techlens/budget.py": "0aa9ba0b64b27848d147d8d7ae27b7a32c0142eec2acab70fc774b1445c3100a",
+    "techlens/cli.py": "55accbb086b1991269fcfbae83e17203b3819f9f984a62f679209e356c0c43ee",
+    "techlens/collection_models.py": "d482a87b87378d14294a07f2b47652b925dc4e81344a5889cd05d40e54182246",
+    "techlens/configuration.py": "7d7be1bc10af7cb0b7d06842a80478718bf542736b0a21c70773d035c7ff142a",
+    "techlens/demo.py": "ab9406e1ca053ff569fe99b5fa6b3eeeb8c531d6ff8dbee102a14b42893d2825",
+    "techlens/evaluation.py": "5aa4e3fad1c9ea7ee91133f9e22024cb0f369ad10577e40718f43b26c917eab4",
+    "techlens/evaluation_boundaries.py": "735db1aeaf7ac517631375668d8ee5e83143cb90b2e067f9e3e3d239a894e17e",
+    "techlens/evaluation_models.py": "40f5f2320fd8bacc7c30a244d9c771da88400533ac7ea24edf6679dc59daf254",
+    "techlens/evidence.py": "6967bdaf3c0df118b2a29cf75b542bd37b5315497704f369d98a9d7f1d49c058",
+    "techlens/evidence_models.py": "fe63d92de49ed9544913c881d254d8d6ccb18506c466afe28e0a8b323fea6e44",
+    "techlens/execution.py": "3be271a53d4a6a1354429dd533dd8ef062feed98ed982f30929b130625eb05f4",
+    "techlens/exporting.py": "97a2507064f08564c1fb5575668bb10b9a536067cfd6e03a990cfc18e90f9df1",
+    "techlens/github_client.py": "cb380aeb87fa8969b01bbb92eba099aacfde5d48eb9e5ed9d752e7c97755ce48",
+    "techlens/github_models.py": "73bd41035c08272d4fc80b459f084b838c97c9079d2524a60d23d01d0a60ee71",
+    "techlens/github_practices.py": "cd6a8c7ab8bed5ec731086a94c6d2ad1473dbfbb5ee10faf1ccb3ec89449ed08",
+    "techlens/graph.py": "2a8ff804e0e9170fd4c5aa609170d1321456acdc42dd22064b98421b33d4caad",
+    "techlens/models.py": "ca485cd093828ad8b6a40a94ea216f7486cbb1784ff9e6a90210903178200d09",
+    "techlens/nodes.py": "d3cb7780f2dec57f2a6ba9906eeac04787c8c8f8401c15b4cf3c39fb05aac186",
+    "techlens/openai_analyzer.py": "7947fc85532c401c46fb1e5e80b3fefa2c6ffaf4f0fb6b88b4011ec347c335fb",
+    "techlens/openai_planner.py": "df2b5dce13fd8173009df10171085d51162738d390f866ea624dbd85cb04b42d",
+    "techlens/openai_requests.py": "5ec99ea45fffa0221ea18b64f2d8f06a7aa2ee4ad723bf3e259f78314cd95bce",
+    "techlens/planning.py": "814b657a738b3a46cc20c56ef7c1eb3d5002696534e415f2d2e83e1245eddfe5",
+    "techlens/presentation.py": "86f1e6dd9ec74bf10ce0d09eb156ff771b6dcc831c337e0370f017b815fa35a7",
+    "techlens/reporting.py": "ea1279c8073abb22b975121a3b977dabc01a7d90c6e104893a94125f5cf69074",
+    "techlens/report_models.py": "a0f3bfa616f04045c6882d045c7959360e74610d8fc75e65a178f0b831d8cdb6",
+    "techlens/request_builder.py": "04bf114f768eb76e226e7ec52a1eb2ec34c2996e9b6eab12aa8f2f91b407a228",
+    "techlens/research_models.py": "b33a000be2f4cd8243db59be88e63ca0cee4d01d7af9a91e32d47b50296da775",
+    "techlens/risk.py": "8f0dfb8f0a41bdeaa0fd8ac3f81866ee29cbdd1288c8c6442ed1f9ae65ec6b59",
+    "techlens/risk_models.py": "6ab75408cb9bf1018ecb8fb06f6316b8273cbb361370cf64b846f3be97dcc6d1",
+    "techlens/search.py": "d2a607e2b46578b5029883e08cf2ceefd59e9107abc3f32d9d08dd8e97efbfdf",
+    "techlens/state.py": "cc57a39d5676098acbb52223f502cdb063a95b1deb88ffdf3aa668f8f3ce19b0",
+    "techlens/tavily_search.py": "c10aba7f006a9900eebdd2b96044b0662ed68f0fdf96c007cb89c069f33914f4",
+    "techlens/ui_artifacts.py": "2a7a4e01027dd81fbbc59ab5837c1a73a32e9765d4478fffbcb678af92dd6949",
+    "techlens/ui_contracts.py": "a2666403c0badf99a399c812b0edaeb3dfc5ee83eec534e698b25c234cb37b15",
+    "techlens/ui_coordinator.py": "e36f49e05cb3d287e164eeb5d77989032b5e33b0354d389938004559953c6cf8",
+    "techlens/ui_presentation.py": "35d19fc8727ba8b71a0160639b3fefa6a7914dce9caa85020b5da53163519001",
+    "techlens/ui_server.py": "47de52b9f81705dc0560fb6f07acae5cca826154086b882889562fc357128209",
+    "techlens/workflow.py": "64e50ac85c69b7389f671b3c45d4b58346d0642c564c9b2b6408affa613ad628",
+    "techlens/__init__.py": "913518e1ec584f72e4411e4e5800d1939b139da51d9e57b33ad82ce679e736b9",
+    "techlens/__main__.py": "5c5c34089c2e24fd481f801be025fee9f1ce342f561bd00a78ffd0a8cae3767e",
+    "techlens/ui_assets/app.css": "8f356297d6c32056fe08ff75293e7b1778867dff9643a5e5b81207985605838c",
+    "techlens/ui_assets/app.js": "31975bc97492e705acd2b65293982cda40d1a3817ded8892193d03e81ba417be",
+    "techlens/ui_assets/index.html": "52c76f45a7ab5fac018a81647b42300587a2506697cb289e62dec52127bca645"
+  },
+  "test_source_sha256": {
+    "tests/test_ui_browser_qa.py": "052d49f0005569ba7b88b9987783b9de6d93772e9fd5534779ef7d98b299351c",
+    "tests/ui_browser_server.py": "cfaa1e628b2e267a13ec7bfa3073c7766b4484b09122ab390b6e33bc13cba1d5",
+    "tests/t011_terminal.py": "5a347c245d8b8bccf1d204c61506850a5cec7d2528494bac8ca23f57f4a47427",
+    "tests/test_ui_artifacts.py": "e8b94ca556708ca9a44ca62a02916cfb631f89ac5c8bb6bc1e3cf4712a2f70e3",
+    "tests/test_t011_acceptance.py": "b2e09c70c1786773b2475305ede577bb91caee203d1ed17951f8b38025712a65",
+    "tests/test_ui_coordinator.py": "cb1422d9f0e3521c36166396bcf3c167e93ab91e749a266534b4dd4bea17e739",
+    "src/techlens/ui_server.py": "47de52b9f81705dc0560fb6f07acae5cca826154086b882889562fc357128209",
+    "tests/ui_browser_walkthrough.cjs": "29336c5e485db8d74865f7692a482c95fd289cf5d4242a53ba7b148e7b1e0106"
+  },
+  "environments": [
+    {
+      "id": "chrome",
+      "os": "Windows11 build26200",
+      "python": "3.12.14",
+      "browser": "Chrome",
+      "version": "155.0.8059.79",
+      "outcome": "PASS",
+      "scope": "scripted DOM, keyboard smoke, full report fidelity, narrow layout"
+    },
+    {
+      "id": "edge",
+      "os": "Windows11 build26200",
+      "python": "3.12.14",
+      "browser": "Edge",
+      "version": "152.0.4191.53",
+      "outcome": "PASS",
+      "scope": "scripted existing browser walkthrough and full report fidelity; not standalone keyboard certification"
+    },
+    {
+      "id": "native",
+      "os": "Windows11 build26200",
+      "python": "3.12.14",
+      "outcome": "PASS",
+      "scope": "actual installed entry points in guarded ConPTY via native CONIN$/CONOUT$; no overridden isatty"
+    },
+    {
+      "id": "python311",
+      "outcome": "NOT VERIFIED",
+      "reason": "No usable existing interpreter found in inspected PATH/registry/common installation/managed-cache locations; no download"
+    },
+    {
+      "id": "other-platforms",
+      "outcome": "NOT APPLICABLE",
+      "reason": "Outside reviewed task; not supported by inference"
+    }
+  ],
+  "browser_observations": [
+    {
+      "environment": "chrome",
+      "version": "155.0.8059.79",
+      "status": "PASS",
+      "mode": null,
+      "keyboard": null,
+      "local_observations": 199,
+      "proxy_denials": 91,
+      "unexpected_console": 0,
+      "expected_denial_console": 6,
+      "reports": 4,
+      "child_attempts": [
+        0,
+        0
+      ]
+    },
+    {
+      "environment": "edge",
+      "version": "152.0.4191.53",
+      "status": "PASS",
+      "mode": null,
+      "keyboard": null,
+      "local_observations": 197,
+      "proxy_denials": 77,
+      "unexpected_console": 0,
+      "expected_denial_console": 6,
+      "reports": 4,
+      "child_attempts": [
+        0,
+        0
+      ]
+    },
+    {
+      "environment": "keyboard-smoke",
+      "version": "155.0.8059.79",
+      "status": "PASS",
+      "mode": "smoke",
+      "keyboard": true,
+      "local_observations": 21,
+      "proxy_denials": 15,
+      "unexpected_console": 0,
+      "expected_denial_console": 0,
+      "reports": 1,
+      "child_attempts": [
+        0
+      ]
+    }
+  ],
+  "cases": [
+    {
+      "case_id": "S01",
+      "environments": "native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Run actual installed console/module help, doctor and version",
+      "expected": "Correct installed identity; real console and zero forbidden attempts",
+      "observed": "Installed module/console help and doctor returned 0; techlens 0.1.0, Python3.12.14, real tty/console and active guard receipts; no sessions/ledgers.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Native receipts; version output; startup counters",
+      "evidence_references": [
+        "final/native"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "S02",
+      "environments": "native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Launch both installed ui entry points, GET local assets, Ctrl+C",
+      "expected": "Exact packaged assets, high loopback port, no session/ledger, exit 130",
+      "observed": "Both actual entry points loaded exact packaged HTML/JS/CSS on high numeric loopback ports; Ctrl+C returned130; zero sessions/ledgers/forbidden attempts.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Two native entry receipts and guarded local HTTP reads",
+      "evidence_references": [
+        "final/native/test_actual_installed_ui_entry0"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "S03",
+      "environments": "native+source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Invalid explicit ports, owned collision, bounded automatic collision/permission probes",
+      "expected": "Safe failure; explicit port unchanged; no provider/session; bounded binds",
+      "observed": "Four source port-policy cases passed; real second UI launch on the owned occupied port returned6 without sessions; explicit ports retained.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Actual owned collision receipts and source regressions",
+      "evidence_references": [
+        "final/native/test_actual_installed_ui_entry0/collision"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "A01",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Prepare one candidate through DOM",
+      "expected": "Order and zero budget; empty lists/unknowns preserved",
+      "observed": "One-candidate summary contained candidate-001, budget string0 and independently empty/unknown context.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Initial request summary parsed and validated",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "A02",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Prepare two candidates through DOM",
+      "expected": "Two ordered distinct candidate IDs",
+      "observed": "Two candidates retained original order and distinct IDs; duplicate-name DOM coverage is A03 (two duplicate names among three).",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "DOM catalog and request assertions",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "A03",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Prepare three candidates through DOM",
+      "expected": "Three ordered IDs and correct candidate limit",
+      "observed": "Three-candidate downloaded request retained original order and max_candidates3.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "DOM/download JSON and source validation",
+      "evidence_references": [
+        "final/edge/request.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "A04",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Leave context empty, then fill four descriptions and all lists",
+      "expected": "Unknowns stay null/empty; supplied strings retained exactly",
+      "observed": "All four descriptions, team_size5 and supplied lists matched the downloaded request; initial omitted fields remained null/empty.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Parsed DOM request and downloaded JSON equality",
+      "evidence_references": [
+        "final/chrome/request.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "A05",
+      "environments": "chrome+edge+native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Use USD0, long positive Decimal and literal-comma item",
+      "expected": "Exact decimal strings; no assessment or permission",
+      "observed": "Long positive Decimal string and literal comma were preserved; native default save kept budget string0 and no session/ledger construction.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Browser request and native SAVE receipts",
+      "evidence_references": [
+        "final/chrome/request.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "A06",
+      "environments": "chrome+edge+native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Submit unsafe URL, empty name/list, negative budget and fake sentinel",
+      "expected": "Expected denial; previous valid request unchanged; secret echo redacted",
+      "observed": "Five deliberate HTTP400 preparations left prior request unchanged; native fake-secret input returned5, published no file and saved only redacted echo.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Five deliberate HTTP400 denials; native exit5/no file",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "A07",
+      "environments": "source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Send malformed/oversized/framing-boundary input",
+      "expected": "Denied before effects; no session or replay",
+      "observed": "Existing malformed/framing/size tests passed under blanket and exact-origin guards with no assessment effects.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Existing guarded test_ui_server/contracts regressions executed",
+      "evidence_references": [
+        "pytest:tests/test_ui_server.py"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "B01",
+      "environments": "chrome+edge+native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Single approve",
+      "expected": "Completed; start1/resume1; preapproval collection0; round1",
+      "observed": "Single completed; one start/resume; all preapproval research counters0; report/current_round1 matched authority.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Authoritative session counters and report comparison",
+      "evidence_references": [
+        "final/chrome/single-report.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "B02",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Comparison edit, preview, Cancel, preview, Apply",
+      "expected": "Cancel retains pending state; displayed proposal equals applied plan",
+      "observed": "Cancel left original plan/checkpoint; displayed Review proposal C matched actual applied objective and one resume.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Native application session counters and barrier/browser assertions",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "B03",
+      "environments": "chrome+edge+native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Partial retrieval approve",
+      "expected": "Partial report with limitations/completeness; round1",
+      "observed": "Partial report/limitations matched independent state; native CLI exit4.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Complete DOM/authoritative report and native exit4",
+      "evidence_references": [
+        "final/chrome/partial-report.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "B04",
+      "environments": "chrome+edge+native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Single reject",
+      "expected": "Rejected; round0; no GitHub/search/analyzer collection",
+      "observed": "Rejected report, round0 and github/search/analyzer counts0; native CLI exit3.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Session observations and native exit3",
+      "evidence_references": [
+        "final/chrome/rejected-report.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "B05",
+      "environments": "source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Six separate post-preview action cases",
+      "expected": "Each snapshot control usable; correct effect/invocation/checkpoint",
+      "observed": "All six parameterized actual-session controls survived unchanged reads and produced the asserted operation-specific effects.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Actual Coordinator/AssessmentSession parameterized regressions",
+      "evidence_references": [
+        "pytest:tests/test_ui_coordinator.py::test_all_snapshot_controls_survive_unchanged_other_tab_reads"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "B06",
+      "environments": "chrome+edge+source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Read/refresh unchanged state across tabs; change revision",
+      "expected": "Stable controls survive; genuinely stale Apply rejected",
+      "observed": "Unchanged tab reads preserved bindings; deliberately stale A returned409 and did not substitute B.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Browser HTTP409 and actual-session stale regressions",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "B07",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Hold A/status responses; overlap Start/Prepare; retry original; change selection",
+      "expected": "No substitution/duplicate start; exact Apply once; selection preserved",
+      "observed": "Overlapping Start/Prepare produced one POST; original retry did not add a start; held same-run/status/mutation callbacks preserved intended binding/selection.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Controlled barriers and actual session counts",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "C01",
+      "environments": "chrome+edge+source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Pending and scheduler-controlled active abandonment",
+      "expected": "Never approves; cannot claim already-started work recalled",
+      "observed": "Pending abandon yielded abandoned/round0 with no resume; controlled active abandon did not falsely recall started work.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Actual graph state/counters and controlled scheduler",
+      "evidence_references": [
+        "pytest:tests/test_ui_coordinator.py::test_active_abandonment_shutdown_and_cleanup_do_not_reconcile"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "C02",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Refresh and close/reopen tabs",
+      "expected": "No implicit decision or new start/resume",
+      "observed": "Seven retained sessions each started once, six resumed once and abandoned session never resumed; tab/refresh observations added no invocation.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Retained seven-session counters; multi-tab reads",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "C03",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Real process restart and stale cookie/run",
+      "expected": "Unavailable; restarted process runs0; no replay",
+      "observed": "Both restarted browser children retained zero runs and rejected stale saved run IDs.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Second child receipt and browser unavailable state",
+      "evidence_references": [
+        "final/edge/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "C04",
+      "environments": "source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Exercise owner4/run2/global8/jobs2/workers8/actions64/artifact bounds",
+      "expected": "Safe capacity denial; no eviction/accounting release",
+      "observed": "Owner/run/job/worker/action/cache/size tests passed. Eight-run source probe denied ninth start, retained accounting, evicted nothing and made no forbidden calls.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Controlled regressions plus separate eight-run probe",
+      "evidence_references": [
+        "source-probes.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "C05",
+      "environments": "source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Advance injected clock beyond idle expiry",
+      "expected": "Correct expiry without real waiting or replay",
+      "observed": "Injected clock expiry test passed without a 30-minute wait.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Existing controlled-clock regression executed",
+      "evidence_references": [
+        "pytest:tests/test_ui_coordinator.py::test_owner_idle_expiry_and_job_capacity"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "D01",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Inspect full reports for completed/comparison/partial/rejected",
+      "expected": "Every visible structured field, claim and section mapping equals canonical state",
+      "observed": "Four full-report types per browser had exact parsed visible roster/context/analyses/comparison/risks/sources/notes/metrics, claims and all13 section mappings/text; independent session/export agreement.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Four reports per browser; parsed DOM, downloads and independent server state",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "D02",
+      "environments": "chrome+edge+source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Download request, pending plan, reports and ZIP repeatedly",
+      "expected": "Canonical bytes, fixed names, exact members and manifest hashes",
+      "observed": "Real browser plan download matched displayed original plan and initial graph-state canonical hash; request/report downloads and exact ZIP/manifest hashes agreed with export_bytes.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Real plan download bound to initial graph plan hash; report export hashes",
+      "evidence_references": [
+        "final/chrome/plan.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "D03",
+      "environments": "source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Inject export failure; GET then explicit artifact retry",
+      "expected": "GET does not recover; terminal-only retry; no decision/start/resume",
+      "observed": "GET after export failure performed no job; explicit retry rebuilt terminal artifacts once without start/decision/resume and preserved valid report status.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Actual-session artifact regression executed",
+      "evidence_references": [
+        "pytest:tests/test_ui_artifacts.py::test_failed_export_get_no_retry_explicit_mutation_once"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "D04",
+      "environments": "chrome+edge+native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Hostile markup/control values and fake credential",
+      "expected": "Inert data, no source navigation/script/credential disclosure",
+      "observed": "Hostile markup stayed inert; known sentinel absent from public text/transcripts; all five final browser-child forbidden-boundary counters0.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "DOM/script assertions, deny proxy and redacted native transcript",
+      "evidence_references": [
+        "final/chrome/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "E01",
+      "environments": "chrome",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Keyboard-only request submission and demo approval",
+      "expected": "Required inputs/actions reachable and workflow completed",
+      "observed": "Chrome keyboard Tab/type/Enter completed request preparation and subsequent demo approval; actual report matched state.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Actual Tab/type/Enter interactions, no programmatic focus substitution",
+      "evidence_references": [
+        "final/keyboard-smoke/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "E02",
+      "environments": "chrome+edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Desktop and 390px layouts with complete report",
+      "expected": "Readable visible information and no horizontal overflow",
+      "observed": "Desktop and 390px reports remained readable; viewport assertions found no horizontal overflow; full approval/report fields accessible.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Actual browser screenshots and viewport assertions",
+      "evidence_references": [
+        "final/edge/06-narrow-viewport.png"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "E03",
+      "environments": "chrome+edge+source",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Observe busy/stale/invalid/capacity/export-unavailable states",
+      "expected": "Explicit textual denials; safe next actions documented",
+      "observed": "Busy/stale/invalid states had textual guidance; capacity/export denials were explicit. Restart/download-only next actions are documented; no accessibility certification claimed.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Live status/busy assertions, fixed messages and manual guidance",
+      "evidence_references": [
+        "docs/offline-walkthrough.md"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "K01",
+      "environments": "native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Actual request SAVE/CANCEL/Ctrl+C/fake secret/existing-file collision",
+      "expected": "Correct exit/publication outcomes; no sessions/ledgers/provider attempts",
+      "observed": "Real terminal SAVE0, CANCEL130, Ctrl+C130, secret denial5 and nonzero no-clobber result matched publication checks; zero session/ledger/forbidden attempts.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Real ConPTY/console-mode receipts; preserved existing bytes",
+      "evidence_references": [
+        "final/native"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "K02",
+      "environments": "native",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Actual installed CLI single/comparison/partial/reject",
+      "expected": "Correct codes 0/0/4/3; one start/resume; canonical exports",
+      "observed": "Actual console single/comparison/partial/reject returned0/0/4/3, one start/resume each and canonical exported file hashes.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Native receipts and files; no simulated streams",
+      "evidence_references": [
+        "final/native"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "X01",
+      "environments": "edge",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Execute existing Edge DOM/asset/request/review/download/restart subset",
+      "expected": "Observed behaviors pass only in exact tested Edge version",
+      "observed": "Fresh Edge152.0.4191.53 passed the scripted request/review/report/download/layout/restart subset; no inference about Firefox/Safari or keyboard-only Edge certification.",
+      "outcome": "PASS",
+      "evidence_mode": "new_scripted_execution",
+      "evidence_requirement": "Fresh Edge152 receipt, DOM reports and hashes",
+      "evidence_references": [
+        "final/edge/browser-evidence.json"
+      ],
+      "reason": "Asserted by actual executions; scope stated, no empirical model-quality claim"
+    },
+    {
+      "case_id": "X02",
+      "environments": "missing-python311",
+      "preconditions": "Existing cached prerequisites; owned outside-checkout QA directories; synthetic dependencies and independent guards",
+      "actions": "Inspect PATH/registry/common managed/install locations",
+      "expected": "Do not infer Python3.11 support or install prerequisites",
+      "observed": "No usable existing Python3.11 was found in inspected locations; no installation or compatibility claim.",
+      "outcome": "NOT VERIFIED",
+      "evidence_mode": "read_only_inventory",
+      "evidence_requirement": "No usable existing interpreter found in inspected locations",
+      "evidence_references": [
+        "inventory:Python3.11"
+      ],
+      "reason": "Optional compatibility prerequisite unavailable"
+    }
+  ],
+  "historical_evidence": [
+    {
+      "origin": "Codex T010",
+      "focused_passes": 85,
+      "full_passes": 888,
+      "mode": "accepted_historical_not_new",
+      "wheel_sha256": "9813f392447b52aa1054d522649cc69b24e0217870d3e956566f39e30d5b314a"
+    },
+    {
+      "origin": "Master T010",
+      "supported_test_passes": 64,
+      "vm_checks": 3,
+      "mode": "accepted_historical_not_new",
+      "limits": "Native sockets and actual browser not independently rerun; not a full888 reproduction"
+    }
+  ],
+  "human_feedback": {
+    "evidence_mode": "informal_human_observation",
+    "source": "User-provided comparison-editor screenshot in this conversation; acceptable visual feedback attributed by T011 brief",
+    "artifact_id": "H01",
+    "artifact_sha256": "1c4619dddd568abea52a9472f1922bfd0aa96eec1b18914b2917281f03b2e43e",
+    "exact_build_binding": "not independently established",
+    "structured_acceptance": false,
+    "human_semantic_adjudication_count": 0,
+    "evidence_references": [
+      "final/human/H01-plan-editor.png"
+    ]
+  },
+  "defects": [
+    {
+      "id": "T011-P01",
+      "category": "product_defect",
+      "severity": "P2",
+      "environment": "Edge152, accepted T010 OS-assigned default port",
+      "reproducer": "Full discovery run restarted UI at127.0.0.1:6667; browser ERR_UNSAFE_PORT",
+      "expected": "Automatically selected URL usable in tested browsers",
+      "actual": "Browser refused restricted service port",
+      "correction": "Only default selection uses49152..65535; at most8 local address-collision binds; explicit ports unchanged; non-collision failures fail closed",
+      "regressions": [
+        "test_default_port_avoids_reproduced_unsafe_service_port_and_bounds_collisions",
+        "test_explicit_port_is_preserved_and_permission_failure_is_not_retried",
+        "actual native/default high-port launch",
+        "actual installed Chrome/Edge restart"
+      ],
+      "disposition": "Corrected; accepted by Master on 2026-10-14"
+    },
+    {
+      "id": "T011-Q01",
+      "category": "verification_harness_defect",
+      "severity": "QA blocker",
+      "actual": "Inherited redirected handles and incremental native screen data prevented truthful terminal capture",
+      "correction": "Explicit startup flags, real console device binding, bounded native reconstruction, child guards and owned-job cleanup",
+      "disposition": "Corrected; real tty/console receipts and actual exit/publication assertions"
+    },
+    {
+      "id": "T011-Q02",
+      "category": "verification_harness_defect",
+      "severity": "QA blocker",
+      "actual": "Late import captured an already patched socket function in a subset run",
+      "correction": "Capture existing scoped original connect during test-module collection; retain exact endpoint whitelist",
+      "disposition": "Corrected; subset and full verification; no guard disabled"
+    }
+  ],
+  "verification": {
+    "pre_fix_focused": {
+      "passed": 109,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 136.56
+    },
+    "discovery_full": {
+      "passed": 911,
+      "failed": 1,
+      "skipped": 0,
+      "seconds": 291.68,
+      "reason": "Reproduced product unsafe-default-port finding; not a pass"
+    },
+    "final_focused": {
+      "passed": 113,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 140.15
+    },
+    "final_full": {
+      "passed": 917,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 287.90,
+      "status": "PASS",
+      "command": "uv run --offline --frozen --no-sync python -B -m pytest -q -p no:cacheprovider",
+      "case_scope": "Final mandatory early-cleanup regression included; all configured native/browser checks",
+      "basetemp_id": "techlens-t011-frozen-final-a19"
+    },
+    "cleanup_targeted": {
+      "passed": 3,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 7.09
+    },
+    "prior_corrected_full": {
+      "passed": 916,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 288.38,
+      "status": "PASS",
+      "command": "uv run --offline --frozen --no-sync python -B -m pytest -q -p no:cacheprovider",
+      "case_scope": "all configured native/browser prerequisites; final source and test set"
+    },
+    "offline_lock_packages": 48,
+    "evaluator": "Final repeats bytes identical; baseline JSON fields/Markdown text equal; no rebaseline; Windows CRLF output vs baselineLF",
+    "providers": "No real transport/authorization observed under guards; demo costs fictional, invoices not verified"
+  },
+  "limits": [
+    "Python3.11 and other platforms not verified",
+    "Practical keyboard/layout checks, not accessibility certification",
+    "No live providers, pricing authority, invoices or T006B",
+    "No persistent history/crash-safe exactly-once execution",
+    "Explicit caller-selected browser-restricted ports remain browser-restricted; protections not disabled"
+  ],
+  "readiness": "Offline readiness accepted by Master on 2026-10-14 in the recorded Windows/Python3.12/Chrome/Edge scope; not public-release or real-provider approval"
+}

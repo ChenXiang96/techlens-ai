@@ -66,3 +66,36 @@ def test_failed_export_get_no_retry_explicit_mutation_once(monkeypatch):
         assert c.report(owner, rid)["report"]["status"] == "completed"
     finally:
         c.close()
+
+
+@pytest.mark.parametrize("name", ["report.json", "report.md"])
+def test_actual_artifact_size_bound_fails_without_partial_bundle(monkeypatch, name):
+    from techlens import ui_artifacts
+    from techlens.ui_contracts import UIError
+    from techlens.presentation import PublicOutput
+    files = {"report.json": b"{}", "report.md": b"small"}
+    files[name] = b"x" * (2 * 1024**2 + 1)
+    monkeypatch.setattr(ui_artifacts, "export_bytes", lambda *args, **kwargs: files)
+    with pytest.raises(UIError, match="size limit"):
+        ui_artifacts.artifacts({}, PublicOutput({}), "single")
+
+
+def test_full_cache_denies_atomic_publication_not_valid_report_or_retry_work():
+    scheduler = Scheduler()
+    c = Coordinator({}, scheduler=scheduler)
+    try:
+        owner = c.owner(create=True)
+        existing, _ = start(c, owner, scheduler)
+        c.act(owner, "approve", existing, action(c, owner, "approve", existing))
+        scheduler.finish()
+        # Controlled cache-occupancy injection, not a raised limit or fabricated report.
+        c.runs[existing].downloads["occupied"] = b"x" * (32 * 1024**2)
+        rid, _ = start(c, owner, scheduler)
+        c.act(owner, "approve", rid, action(c, owner, "approve", rid))
+        scheduler.finish()
+        run = c.runs[rid]
+        assert run.phase == "terminal" and run.artifact_error and run.downloads == {}
+        assert c.report(owner, rid)["report"]["status"] == "completed"
+        assert run.state["current_round"] == 1 and scheduler.calls == []
+    finally:
+        c.close()
