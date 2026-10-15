@@ -1,6 +1,9 @@
 # Local visual interface
 
+For installation, see [the README](../README.md#install-into-a-chosen-environment).
 For exact user actions and expected results, see [the offline walkthrough](offline-walkthrough.md).
+Use the selected environment's interpreter or console launcher; no Node/Playwright
+installation is needed to operate the product. See [compatibility limits](preview-limitations.md).
 
 Run `techlens ui` or `python -m techlens ui`. The default selects an available
 port. `techlens ui --port 8765` requests that specific port (1–65535).
@@ -121,8 +124,10 @@ UI unit/HTTP tests use only real guarded application-loopback sockets and canned
 providers. The existing global network fixture is unchanged. The separately run
 browser harness requires already installed Node/Playwright/Chromium, routes only
 the concrete application origin, and uses a deny-only proxy for other traffic;
-no browser/package download is allowed. Installed-wheel QA uses only the existing
-disposable environment, cached build prerequisites and a locally built wheel.
+no browser/package download is allowed. Installed-wheel QA uses configured disposable
+environments, cached build prerequisites and locally built wheels. Historical replacement
+in an existing QA environment is not proof of a genuinely fresh release installation;
+release verification records that gate separately in its own results.
 
 Live providers, billing/pricing authority, real-model quality, T-006B, durable
 recovery and Python 3.11 execution remain **NOT VERIFIED**.

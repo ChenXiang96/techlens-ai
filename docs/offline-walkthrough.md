@@ -6,12 +6,23 @@ factual truth, or make provider requests. A positive budget is not permission.
 
 ## Prerequisites and launch
 
-Use an existing TechLens environment. This guide does not download or install
-Python, packages or browsers. If the environment is missing, stop and report it.
+Use an existing TechLens environment, or follow the explicit user-initiated
+[installation instructions](../README.md#install-into-a-chosen-environment) first.
+This walkthrough itself does not download or install Python, packages or browsers.
+If prerequisites are missing during an offline run, stop and report them.
 The demonstrated environment is Windows/Python 3.12; see the acceptance record for
 the exact tested browser versions and unverified environments.
 
-Open PowerShell in your TechLens checkout and use its existing environment:
+For an installed package, use your chosen environment's full interpreter path:
+
+```powershell
+$previewEnvPython = Read-Host 'Full path to the installed environment Python executable'
+& $previewEnvPython -m techlens doctor
+& $previewEnvPython -m techlens ui
+```
+
+Alternatively, open PowerShell in a reviewed TechLens checkout with its existing
+development environment:
 
 ```powershell
 .\.venv\Scripts\python.exe -B -m techlens doctor

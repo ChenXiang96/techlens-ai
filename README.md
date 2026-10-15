@@ -1,142 +1,142 @@
 # TechLens AI
 
-T-009 adds an English local request builder, readable plan review with confirmed
-modification previews, and summary/full report views. Start without credentials:
+## Initial offline preview · version 0.1.0
 
-```text
-techlens request create --output new-request.json
-techlens demo --scenario single --output-dir new-demo-report
-techlens demo --scenario comparison --report-view full
+TechLens explores an evidence-grounded technology-assessment workflow. This preview
+lets you prepare requests and explore supervised **synthetic demonstrations** in
+an English local browser or terminal.
+
+**No keys are needed. Demo candidates, evidence, usage and prices are fictional.**
+The browser does not research repositories you enter. A completed demo is not a
+real technology assessment, production-readiness conclusion or model-quality result.
+Citations preserve traceability; they do not establish truth or semantic support.
+
+### What you can try
+
+- Prepare and download a one-to-three-candidate request with optional team context
+  and an explicit USD 0 budget.
+- Start a package-owned single-candidate, comparison or partial-retrieval demo.
+- Review its plan, Approve/Reject, or preview edits and explicitly Apply/Cancel.
+- Inspect summary/full reports and canonical JSON, Markdown and ZIP downloads.
+- Explore bounded, process-local runs without provider requests or live consent.
+
+## Prerequisites and compatibility
+
+The recorded offline environment is Windows 11 build 26200 / Python 3.12.14,
+Chrome 155.0.8059.79 and the tested Edge 152.0.4191.53 subset.
+Python `>=3.11` is declared in package metadata; Python 3.11 and other platforms
+have not been executed. These are version-specific observations, not universal
+browser/OS support. See [limitations and evidence provenance](docs/preview-limitations.md).
+
+Python and the declared runtime dependencies are required. uv is a development/
+reproducibility tool, not an inherent CLI/browser requirement. Node, Playwright,
+pytest and native terminal helpers are QA tooling, not product runtime prerequisites.
+
+## Install into a chosen environment
+
+No public registry package or release download is established here. Do not infer
+that a same-named registry project belongs to TechLens. Publication URL is pending;
+use a reviewed local wheel or source checkout.
+
+The following PowerShell commands describe **user-initiated installation**; dependency
+installation may access package indexes. It does not authorize provider execution.
+For an offline install, use an already available compatible dependency cache or
+reviewed wheelhouse; a cache miss is a blocker, not a reason to silently go online.
+
+Choose an existing Python 3.12 interpreter, set its actual path, and choose a new
+environment path. Do not replace an existing environment:
+
+```powershell
+$previewPython = Read-Host 'Full path to your existing Python 3.12 executable'
+& $previewPython -m venv .preview-venv
+$previewEnvPython = (Resolve-Path .preview-venv/Scripts/python.exe).Path
 ```
 
-Request creation is local and defaults its guided budget to USD 0. It saves input;
-it does not assess the entered repositories, construct provider clients, or grant
-permission to spend. Demos use their own curated synthetic scenarios. See the
-[English walkthrough](docs/local-cli.md) for plan review, cancellation and exports.
+For a specifically supplied, reviewed local wheel:
 
-T-008 adds default-deny live authorization. Local commands and demos require no
-permission. `assess --live` requests exact run-specific interactive consent before
-client construction or paid planning; research-plan approval remains a separate gate.
-See [live authorization and library compatibility](docs/live-authorization.md).
-
-TechLens assesses one to three original GitHub-hosted technologies for one shared team context. T-005 adds deterministic risk observations, structured adoption analysis, citation checks, a typed 13-section report, and per-run budget admission.
-
-Evidence integrity, citation integrity, and semantic support are different. This pipeline validates the first two. A cited statement is not automatically true, credible, or semantically supported.
-
-## Local verification
-
-Python 3.11+ and uv are required. Existing dependencies remain unchanged.
-
-```console
-uv run --frozen --offline --no-sync pytest
-git diff --check
+```powershell
+$previewWheel = Read-Host 'Full path to the reviewed techlens-0.1.0-py3-none-any.whl'
+& $previewEnvPython -m pip install $previewWheel
 ```
 
-Tests remove provider credentials, block real socket connections, and use fake adapters or httpx MockTransport. Fictional rates occur only in test fixtures. No live provider verification was performed for T-005.
+Alternatively, from a reviewed source-checkout root:
 
-## Workflow
-
-```text
-validate_request / initialize ledger
-  -> planner [reserve count -> count -> reserve generation -> generation]
-  -> human_review (interrupt)
-       reject -> report -> validate / finalize metrics -> END
-       approve or valid modify
-         -> GitHub collection + bounded web collection
-         -> terminal-outcome join (current_round = 1)
-         -> normalize_evidence -> validate_evidence
-         -> deterministic risk rules -> bounded analysis projection
-         -> analyzer [reserve count -> count -> reserve generation -> generation]
-         -> validate claims / assemble comparison
-         -> report -> independently validate / finalize metrics -> END
+```powershell
+& $previewEnvPython -m pip install .
 ```
 
-Use `build_graph(planner=..., search_provider=..., analyzer=..., rates=...)`. The production adapters are `OpenAIResearchPlanner`, `OpenAIAdoptionAnalyzer`, and `TavilySearchProvider`. They read `OPENAI_API_KEY`, `OPENAI_MODEL` (default `gpt-5.6-luna`), and `TAVILY_API_KEY`; GitHub uses optional `GITHUB_TOKEN`. Clients are caller-owned and never checkpointed.
+Check installation errors before continuing. These alternatives do not assert that
+a public release is already available. Release preparation, license completion and
+first-install checks are tracked in [the release checklist](docs/release-checklist.md).
 
-Start with `graph.invoke({"request": request}, config)`, where config contains a stable, nonblank `configurable.thread_id`. Inspect the returned `__interrupt__` plan. Resume the same runner with `Command(resume={"action": "approve"})`, `reject`, or `modify` plus a valid `modified_plan`. No GitHub or Tavily call precedes approval. Invalid review input never authorizes collection.
+## Launch the local interface
 
-Candidate IDs, web task IDs, comparison targets, repository mappings, and limits remain application-controlled. Duplicate display names remain valid. All GitHub selection uses the original candidate repository. Each branch checkpoints individual operation outcomes and the parent explicitly joins both branches. Only the join advances the research round. There is no second research round.
+Use the same environment interpreter:
 
-## Paid-call admission
-
-No production rate card is bundled. With `rates=None`, the graph returns a truthful partial result before provider transport. Direct `OpenAIResearchPlanner.plan()` is blocked; dispatch through the budgeted graph.
-
-A caller-supplied trusted `RateCard` must identify the model, USD units, source reference, effective date, and applicable upper token rates, including relevant billing premiums. It also requires an independently justified token-count per-call upper fee, source and date, or an authoritative zero-fee basis. Token-count pricing is never inferred from generation token rates. Unknown preflight pricing blocks the count request itself. Search pricing likewise requires an explicit per-attempt upper fee and its source/date; no free credits are presumed.
-
-Each count call has its own operation, attempt ID and committed reservation. Its normalized `VerifiedInputCount` binds the model and canonical digest of the complete shared model/instructions/input/strict schema/settings. Counting and generation use identical token-relevant request JSON. Generation additionally sets its output cap and `store=False`. Input size is bounded before counting; provider counts include structured input overhead. Unknown/unprovable bounds block dispatch.
-
-The Decimal ledger enforces settled estimated cost + unresolved reservations + new reservation <= the immutable request ceiling (default USD 0.15). USD 0.40 is not an automatic fallback. Failed or interrupted calls without trustworthy billing retain their reservations. A successful count may remain billing-unknown while its verified count is usable. Reconciliation is idempotent. Reported token or cost overruns remain visible and block later paid calls. Pricing protection depends on the configured upper rates being correct; it is not invoice reconciliation.
-
-Planner and analyzer each allow one logical generation request, at most two separately reserved attempts, and one count preflight with no automatic preflight retry. An unchanged generation retry reuses the verified count. Web tasks allow at most two attempts each; every attempt consumes the original run-wide max_web_searches allowance. SDK retries remain disabled. Only classified transient transport, clear rate-limit, and server failures can retry. Authentication, quota, refusal, invalid output, and citation/integrity failures cannot. Timeouts remain explicit; backoff is bounded.
-
-The CAD 10 project budget and remaining historical Day 03-05 cash allowance are manual concerns, not tracked by this per-run ledger.
-
-## Replay and checkpoint limits
-
-Retain the returned runner, its process-local `AttemptExecutor`, and its `InMemorySaver`. One invocation per run is allowed; different runs have separate ledgers. Historical or externally modified checkpoint execution is rejected by the retained runner.
-
-A new admission alone creates a READY dispatch slot. Idempotent admission cannot recreate it. Every dispatch verifies an actual committed matching reservation after a synchronous checkpoint barrier. READY is claimed atomically once; completed normalized outcomes are cached before graph reconciliation. Resume reapplies cached outcomes without transport. An in-flight operation suspends competing execution. Missing or ambiguous slots retain liability and cannot authorize replay.
-
-A fresh executor restoring any existing run fails closed for new dispatch slots, including snapshots that precede a reservation: it cannot establish whether later calls are missing from that snapshot. This is same-process protection, not durable recovery or exactly-once billing across process crashes. Process loss also loses the in-memory saver. A restored ledger retains known outstanding reservations, but lost history cannot be reconstructed or safely reset automatically.
-
-## Evidence, risks, and analysis
-
-The T-004 strict source contract remains when coverage is omitted. Explicit partial coverage requires one ordered terminal outcome per original GitHub candidate and approved web task: succeeded, failed, skipped_budget, or skipped_limit. Successful zero-hit search is distinct from failure. Failed collection creates no synthetic signals or evidence.
-
-Normalization keeps the unchanged 24-item GitHub registry per successful candidate plus one evidence record per successful web result. Evidence IDs remain canonical in original candidate/metric/task/result order. Bounded counts retain lower-bound semantics. All four practice indicators must agree with tree completeness. Null license/release observations and duplicate web URLs are preserved.
-
-Versioned pure rules flag recorded archive state, undetected license, stale release, low complete commit activity, complete-population concentration, and recognized-path gaps. Defaults are 365 days, fewer than 5 commits in 90 days, and top-contributor share >= 0.80. These are product heuristics. Unknown and truncated data are not reassuring negatives. Only a known repository-unavailable collection outcome triggers the access observation; authentication, rate-limit, timeout, and other collection failures keep their original categories and make access not evaluable. Issue-resolution health remains not evaluable from collected counts.
-
-One bounded structured analyzer request covers the original candidate roster and six shared dimensions: maintenance, technical stack, operations, maturity, risk tolerance, and ecosystem fit. Missing team fields remain unknown. The deterministic projection preserves stored evidence, limits web snippets to 1,200 characters and at most 24 web records, omits oversized records, and records omissions/excerpts. Only eligible evidence IDs are exposed as citation metadata. Retrieved text is untrusted data; the analyzer has no tools or provider authority.
-
-Application code assigns claim IDs after parsing and reuses the T-004 reference validator. Comparison claims require candidate-assigned evidence for every named candidate. Invalid drafts are discarded entirely without an LLM repair call. There is no total score or forced winner. A single candidate has comparison marked not applicable.
-
-## Report and metrics
-
-The typed report preserves all 13 sections, with explicit insufficient-information content when needed. It copies supplied team context, resolves URLs from evidence, and references validated claims and deterministic flags. Assembly makes no additional LLM call. Independent validation rechecks evidence provenance, citations, candidate/rubric coverage, flags, limitations, report text ownership and measured accounting.
-
-Statuses distinguish completed, partial, rejected, and failed. Expected source/budget/analysis failures produce visible partial results; evidence integrity failures block analysis and produce a failed path. Completed means the pipeline completed, not that every unknown was resolved.
-
-Metrics include start/end times and elapsed wall time including human-review wait, admitted provider attempts and ambiguous attempts, supplied token/credit usage, measured GitHub requests, evidence/claim/round counts, settled estimates and unresolved reservations. Planner, analyzer, LLM, count, and search attempt totals count every admitted ledger record. Admission alone does not prove that transport began. `ambiguous_attempts` counts records without a settled provider outcome, including reservations interrupted before dispatch; `outstanding_reservations_usd` retains their liability. Failed GitHub request totals are unknown because the unchanged T-002 wrapper exposes its measured count only on success.
-
-Automatic research sufficiency loops, source credibility scores, aggregate adoption scoring, RAG, UI, databases and persistent recovery remain outside this implementation.
-
-## T-006A offline evaluation
-
-The separate offline harness contains 26 synthetic cases and 52 canned samples. It
-exercises existing structural validators and fake-provider boundaries, and scores
-explicit fixture expectations. It does not modify the production workflow or make
-live calls. Actual-model semantic quality and prompt-injection resistance remain
-**NOT VERIFIED**; fixture labels are not human adjudication.
-
-```text
-uv run --frozen --offline --no-sync python -m techlens.evaluation --dataset evals/t006/v1 --format markdown
+```powershell
+& $previewEnvPython -m techlens --version
+& $previewEnvPython -m techlens doctor
+& $previewEnvPython -m techlens ui
 ```
 
-The default command is read-only. Optional `--output-dir new-directory` exports JSON
-and Markdown without overwriting existing output. See [evaluation documentation](docs/t006-evaluation.md)
-and the [fixture-only baseline](evals/t006/v1/baseline.md). T-006B live execution and its
-batch runner are not implemented or authorized.
-# Local CLI MVP
+Or run that environment's installed `techlens` console command. Open the exact
+printed `http://127.0.0.1:<port>/` URL manually. Keep the terminal running.
+Ctrl+C stops the server; restart loses retained runs and can select a new port.
+Do not disable browser port protections, expose the server on a LAN, or treat
+closing a tab as cancellation.
 
-Run `python -m techlens --help` or the installed `techlens --help` command.
-Start with `techlens doctor`, then `techlens demo --scenario single`; comparison
-and partial demo scenarios are also available. Demos use packaged synthetic data,
-the real approval interrupt, no credentials, and no network. Type `approve` or
-`reject`, or use `save-plan` / `modify` to review an edited plan.
+Follow [the offline walkthrough](docs/offline-walkthrough.md) for request preparation,
+Approve, Modify/Cancel/Apply, partial/rejected results and downloads.
 
-See [the local CLI guide](docs/local-cli.md) for live configuration gates, request
-examples, installation verification, safe exports, exit codes and limitations.
-No production count-price basis is supplied; live billing and provider behavior
-remain NOT VERIFIED. T-006A is a separate offline evaluation harness, not the demo.
+## Try the terminal workflow
 
-## Offline local browser interface
+Use new output destinations whose parents already exist:
 
-Run `techlens ui` (or `python -m techlens ui`), then manually open the printed
-127.0.0.1 URL. Optional `--port 8765` selects a fixed local port. Prepare/download
-requests separately from package-owned synthetic single/comparison/partial demos.
-Review, approve/reject, or preview and explicitly apply plan edits. Reports and
-canonical JSON/Markdown/ZIP downloads retain the accepted validation contracts.
-No live browser execution, provider calls, new dependency or persistent recovery.
-See [local UI guide](docs/local-ui.md) for security, lifecycle, bounds and limits.
-For step-by-step offline testing, use the [offline walkthrough](docs/offline-walkthrough.md).
+```powershell
+& $previewEnvPython -m techlens request create --output new-request.json
+& $previewEnvPython -m techlens demo --scenario single --output-dir new-single-report
+& $previewEnvPython -m techlens demo --scenario comparison --report-view full
+& $previewEnvPython -m techlens demo --scenario partial --output-dir new-partial-report
+```
+
+Request creation defaults to USD 0. Inspect the full summary and explicitly type
+`SAVE` or `CANCEL`. Saving only prepares input; a demo never assesses that request.
+The [preparation examples](examples/request-single.json) likewise explicitly use
+USD 0. The underlying domain default remains unchanged.
+
+At a demo's review prompt, inspect the plan and type `approve`, `reject`, or
+`modify`. No automatic approval occurs. A partial demo intentionally demonstrates
+failed synthetic retrieval. All demo prices and usage remain fictional.
+See [the CLI guide](docs/local-cli.md) for editing, export semantics and exit codes.
+
+## Limits, costs and technical documentation
+
+Runs are bounded and process-local: no persistent history or durable exactly-once
+recovery. Closing a tab cannot recall work already started. CLI exports require
+supported hard-link publication; use a new destination. Browser saves are controlled
+by your browser.
+
+Real services, independent token-count fee authority, invoices, actual-model quality,
+T-006B and Python 3.11 execution remain **NOT VERIFIED**. No production rate card
+is supplied. A positive request budget is not permission to spend.
+
+- [Preview limitations and verification provenance](docs/preview-limitations.md)
+- [Browser guide and lifecycle/security bounds](docs/local-ui.md)
+- [Advanced architecture, evidence, accounting and replay contracts](docs/architecture.md)
+- [Advanced live authorization and supported library usage](docs/live-authorization.md)
+- [Separate fixture-only evaluator](docs/t006-evaluation.md)
+
+The non-executable [rate-card template](examples/rate-card.template.json) is advanced,
+unverified input, not provider pricing. It is outside the offline quickstart.
+No live provider operation is part of this preview walkthrough.
+
+## License, contributions and release status
+
+Licensed under [MIT](LICENSE), Copyright (c) 2026 Xiang Chen. The owner confirmed
+this scope for project-authored code, UI and synthetic fixtures. This does not certify
+third-party rights. Public distribution still requires completed artifact/install
+gates and a separate publication decision; dependency metadata is not legal clearance.
+
+See [contribution guidance](CONTRIBUTING.md), [release-note draft](docs/release-notes.md)
+and [publication gates](docs/release-checklist.md). No public support channel, security
+response promise, public registry ownership or release publication is implied.

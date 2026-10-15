@@ -1,7 +1,10 @@
 # Local CLI MVP
 
-The [offline walkthrough](offline-walkthrough.md) covers the existing local environment
-and browser journeys without installing prerequisites or issuing live permission.
+Start with [installation in the README](../README.md#install-into-a-chosen-environment)
+and the [offline walkthrough](offline-walkthrough.md). Run commands using the chosen
+environment's interpreter or its installed console launcher, not an unrelated global
+Python. The [preview limitations](preview-limitations.md) distinguish declared support
+from actual version-specific verification.
 
 The CLI wraps the existing supervised, budgeted, one-round graph. It does not
 establish live API availability, price authority, semantic correctness, or production readiness.
@@ -86,7 +89,8 @@ See `examples/request-single.json`, `request-comparison.json`, and
   "assessment_id": "my-assessment",
   "candidates": [{"name": "LangGraph", "repository_url": "https://github.com/langchain-ai/langgraph"}],
   "team_profile": {},
-  "priorities": []
+  "priorities": [],
+  "constraints": {"max_research_rounds": 1, "max_web_searches": 2, "max_candidates": 1, "max_run_cost_usd": "0"}
 }
 ```
 
@@ -94,7 +98,13 @@ Edit names, original GitHub root URLs, supplied team context, priorities and lim
 Unknown team fields remain unknown, not invented defaults. Candidate IDs come from
 request order; duplicate display names are valid. Unknown nested fields and duplicate
 JSON keys are rejected by the application, without changing the domain models.
-The default USD ceiling remains 0.15; the current workflow never executes a second round.
+This preparation example explicitly sets USD 0; the underlying domain default remains
+USD 0.15. The current workflow never executes a second round.
+
+## Advanced live configuration (not the offline quickstart)
+
+The commands below describe existing guarded interfaces, not a verified live service
+or a suggested preview exercise. No live pricing basis is bundled.
 
 Credentials belong only in environment configuration: `OPENAI_API_KEY`,
 `TAVILY_API_KEY`, and optional `GITHUB_TOKEN`. Never put them in JSON, command-line
@@ -237,16 +247,21 @@ Python 3.11 execution and T-006B remain separate verification gates.
 
 ## Installation and offline verification
 
-Python >=3.11 is declared. Use the existing lockfile and declared Hatchling backend:
+Python >=3.11 is declared, not fully compatibility-tested. uv and cached build tools
+are developer prerequisites, not installed product requirements. The following source
+workflow uses an existing lockfile and declared Hatchling backend:
 
 ```text
 uv sync --frozen --offline
 uv build --offline --wheel --out-dir <wheel-directory>
 ```
 
-For isolated QA, set `UV_PROJECT_ENVIRONMENT` to a fresh environment outside the
-checkout before sync; never replace the development environment. Explicitly install
-the built wheel over the editable package (same version must still be replaced):
+That source/development workflow is not a clean first-install test. Release QA creates
+a genuinely empty, outside-checkout environment and installs the reviewed wheel's
+locked runtime closure offline, without preinstalling pytest or source/test modules.
+Never replace the development environment or reuse a populated QA environment as
+proof of first installation. Reinstallation in an existing environment is only a
+separate identity/regression check:
 
 ```text
 uv pip install --offline --no-deps --reinstall --python <fresh-python> <wheel-file>

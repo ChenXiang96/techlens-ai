@@ -1,0 +1,429 @@
+{
+  "schema_version": "techlens-t012-release-readiness-v1",
+  "date": "2026-10-14",
+  "baseline_commit": "50859f0b66f06ad3f911d1137a53d14483c14dc3",
+  "branch": "main",
+  "prepared_tree_has_uncommitted_changes": true,
+  "master_release_readiness": "FINAL PASS",
+  "readiness": "ACCEPTED_LOCAL_OFFLINE_PREPARATION",
+  "owner_decisions": {
+    "license": "MIT",
+    "copyright": "Copyright (c) 2026 Xiang Chen",
+    "scope": "Owner confirmed project-authored code, UI and synthetic fixtures that the owner has authority to license; no third-party rights certification",
+    "provenance": "Direct human answers in this task on 2026-10-14; MIT selection recorded in Master Plan Review",
+    "license_body": "Exact Master-reviewed MIT grant/disclaimer from locally cached Hatchling1.32.4; dependency copyright identity not copied"
+  },
+  "release_identity": {
+    "package": "techlens",
+    "version": "0.1.0",
+    "draft_tag": "v0.1.0",
+    "draft_title": "TechLens AI 0.1.0 — Initial Offline Preview",
+    "tag_created": false,
+    "publication_authorized": false
+  },
+  "scope": "English local offline preparation; narrowly authorized missing locked-runtime-wheel download was not needed. No provider calls, paid execution, source builds, upgrades, normal-user environment edits, commit/push/tag/upload/visibility/CI action.",
+  "source_inputs": {
+    "frozen_members": 124,
+    "unchanged_after_build": true,
+    "runtime_members": 47,
+    "production_source_unchanged": true,
+    "dependencies_lock_evaluation_and_T011_records_unchanged": true
+  },
+  "artifacts": {
+    "wheel": {
+      "name": "techlens-0.1.0-py3-none-any.whl",
+      "sha256": "57d2b200258c3c43cdfb60b61d5df004cd48cf76db04a786bd052e54b79eca4b",
+      "members": 52
+    },
+    "sdist": {
+      "name": "techlens-0.1.0.tar.gz",
+      "sha256": "348be931c65baaa8b619d38c9c320d19628261776caa32acc402345348cc676b",
+      "members": 125
+    },
+    "sdist_derived_wheel": {
+      "rebuilt_wheel_sha256": "57d2b200258c3c43cdfb60b61d5df004cd48cf76db04a786bd052e54b79eca4b",
+      "archive_bytes_equal": true,
+      "all_member_payloads_equal": true,
+      "runtime_members": 47,
+      "member_count": 52
+    },
+    "accepted_T011_wheel_preserved_sha256": "dc0adb41522af48fd4096c69ae9faa72326b72132867f334404b28785207e175"
+  },
+  "fresh_install": {
+    "status": "PASS_MASTER_CONFIRMED",
+    "existing_interpreter": "CPython3.12.14 win-amd64",
+    "environment": "Same demonstrably empty fresh-env; zero distributions re-established immediately before successful installation",
+    "system_site_packages": false,
+    "distributions_before_install": 0,
+    "distributions_after_install": 43,
+    "runtime_dependencies": 42,
+    "project_wheel": "Reviewed licensed wheel; hash unchanged",
+    "offline": true,
+    "index_disabled": true,
+    "only_binary": true,
+    "require_hashes": true,
+    "cache_disabled": true,
+    "downloads": 0,
+    "old_environment_copied": false,
+    "version_constraints_relaxed": false,
+    "installed_distributions": {
+      "annotated-types": "0.8.0",
+      "anyio": "4.15.1",
+      "certifi": "2026.7.22",
+      "charset-normalizer": "3.5.1",
+      "colorama": "0.4.6",
+      "distro": "1.9.0",
+      "h11": "0.16.0",
+      "httpcore": "1.0.9",
+      "httpcore2": "2.13.0",
+      "httpx": "0.28.1",
+      "httpx2": "2.13.0",
+      "idna": "3.20",
+      "jiter": "0.17.0",
+      "jsonpatch": "1.33",
+      "jsonpointer": "3.1.1",
+      "langchain-core": "1.6.3",
+      "langchain-protocol": "0.0.19",
+      "langgraph": "1.2.11",
+      "langgraph-checkpoint": "4.2.0",
+      "langgraph-prebuilt": "1.1.0",
+      "langgraph-sdk": "0.4.4",
+      "langsmith": "0.13.0",
+      "openai": "2.54.0",
+      "orjson": "3.12.0",
+      "ormsgpack": "1.12.2",
+      "packaging": "26.3",
+      "pydantic": "2.13.5",
+      "pydantic-core": "2.46.5",
+      "pyyaml": "6.0.3",
+      "requests": "2.34.2",
+      "requests-toolbelt": "1.0.0",
+      "sniffio": "1.3.1",
+      "techlens": "0.1.0",
+      "tenacity": "9.1.4",
+      "tqdm": "4.70.1",
+      "truststore": "0.10.4",
+      "typing-extensions": "4.16.0",
+      "typing-inspection": "0.4.4",
+      "urllib3": "2.8.0",
+      "uuid-utils": "0.17.1",
+      "websockets": "16.1.1",
+      "xxhash": "4.0.1",
+      "zstandard": "0.25.0"
+    },
+    "metadata_and_runtime_identity": {
+      "runtime_members_verified": 47,
+      "archive_files_except_RECORD_matched": 51,
+      "archive_RECORD_members": 52,
+      "installed_RECORD_members": 57,
+      "installer_generated_entries": [
+        "../../Scripts/techlens.exe",
+        "techlens-0.1.0.dist-info/INSTALLER",
+        "techlens-0.1.0.dist-info/REQUESTED",
+        "techlens-0.1.0.dist-info/direct_url.json",
+        "techlens-0.1.0.dist-info/uv_cache.json"
+      ],
+      "record_handling": "Archive RECORD validated independently; installed RECORD regenerated for installer metadata/native launcher and each installed hash/size reverified, not compared byte-for-byte",
+      "license_metadata_and_payload_verified": true,
+      "isolated_identity_probe": true,
+      "repository_or_old_environment_fallback": false,
+      "forbidden_attempts": {
+        "network": 0,
+        "provider": 0,
+        "authorization": 0
+      }
+    },
+    "source_inventory": "External b01-completion-a1/prerequisite-inventory.json",
+    "before_after_evidence": "External before-install-inventory.json / installed-identity.json",
+    "install_command": "uv --no-cache pip install --offline --no-index --no-python-downloads --only-binary :all: --require-hashes --link-mode copy --find-links <isolated-verified-wheelhouse> --python <fresh-python> --requirement <locked-local-install.txt>",
+    "install_exit_code": 0,
+    "fresh_installed_cli_ui_and_member_identity": "PASS_CODEX_EVIDENCE_PENDING_MASTER; actual approved native/browser harnesses bound to fresh-env"
+  },
+  "verification": {
+    "focused_initial": {
+      "passed": 44,
+      "failed": 0,
+      "skipped": 2,
+      "reason": "Final artifacts not yet configured"
+    },
+    "focused_after_owner_license": {
+      "passed": 48,
+      "failed": 0,
+      "skipped": 2,
+      "reason": "Final artifacts not yet configured"
+    },
+    "focused_final": {
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 3.5
+    },
+    "full_frozen_offline": {
+      "passed": 967,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 313.84,
+      "command": "uv --cache-dir <existing-cache> run --offline --frozen --no-sync python -B -m pytest -q -p no:cacheprovider --basetemp=<new-owned-output>",
+      "installed_fixture_provenance": "Existing populated T-011 QA environment, not the blocked new installation. Its runtime/source/wheel identity tests are regression evidence, not newly licensed fresh-install evidence."
+    },
+    "offline_lock": {
+      "status": "PASS",
+      "packages": 48,
+      "lock_modified": false
+    },
+    "evaluator": {
+      "status": "PASS",
+      "repeats": 2,
+      "canned_samples": 52,
+      "repeat_bytes_equal": true,
+      "baseline_json_fields_and_markdown_text_equal": true,
+      "rebaseline": false,
+      "warnings": "Existing LangGraph unregistered checkpoint-type notices; no dependency/serializer changes"
+    },
+    "privacy_scan": {
+      "frozen_input_members": 124,
+      "source_unchanged_since_build": true,
+      "archive_secret_private_path_findings": [],
+      "scope": "Pattern scan and inventory, not universal secret detection or legal clearance"
+    },
+    "regression_receipts": {
+      "browser_regressions": [
+        {
+          "evidence": "test_actual_installed_browser_0/browser-evidence/browser-evidence.json",
+          "status": "PASS",
+          "mode": "full",
+          "children": 2,
+          "forbidden_attempts": 0,
+          "unexpected_console_errors": 0,
+          "report_fidelity_checks": 4,
+          "installed_environment": "existing populated T-011 QA environment, not fresh installation"
+        },
+        {
+          "evidence": "test_actual_installed_browser_1/browser-evidence/browser-evidence.json",
+          "status": "PASS",
+          "mode": "full",
+          "children": 2,
+          "forbidden_attempts": 0,
+          "unexpected_console_errors": 0,
+          "report_fidelity_checks": 4,
+          "installed_environment": "existing populated T-011 QA environment, not fresh installation"
+        },
+        {
+          "evidence": "test_t011_initial_installed_br0/evidence/browser-evidence.json",
+          "status": "PASS",
+          "mode": "smoke",
+          "children": 1,
+          "forbidden_attempts": 0,
+          "unexpected_console_errors": 0,
+          "report_fidelity_checks": 1,
+          "installed_environment": "existing populated T-011 QA environment, not fresh installation"
+        }
+      ],
+      "guarded_native_receipts": 17,
+      "native_receipts": [
+        "test_actual_installed_ui_entry0/collision/receipt.json",
+        "test_actual_installed_ui_entry0/receipt.json",
+        "test_actual_installed_ui_entry1/collision/receipt.json",
+        "test_actual_installed_ui_entry1/receipt.json",
+        "test_native_cli_real_review_an0/receipt.json",
+        "test_native_cli_real_review_an1/receipt.json",
+        "test_native_cli_real_review_an2/receipt.json",
+        "test_native_cli_real_review_an3/receipt.json",
+        "test_native_fake_secret_echo_i0/receipt.json",
+        "test_native_installed_entry_gu0/receipt.json",
+        "test_native_installed_entry_gu1/receipt.json",
+        "test_native_installed_entry_gu2/receipt.json",
+        "test_native_installed_entry_gu3/receipt.json",
+        "test_native_interrupt_request_0/receipt.json",
+        "test_native_request_no_clobber0/receipt.json",
+        "test_native_request_save_cance0/receipt.json",
+        "test_native_request_save_cance1/receipt.json"
+      ],
+      "new_fresh_install_receipts": 0
+    },
+    "setup_failures": [
+      "Sandbox uv interpreter cache persistence denied; approved out-of-sandbox creation succeeded.",
+      "Two offline installation resolutions failed; fresh-install gate remains BLOCKED.",
+      "Sandbox uv lock cache access denied; approved out-of-sandbox check passed.",
+      "Initial standalone evaluator guard rejected its in-memory MockTransport; corrected QA guard permits explicit MockTransport only, denies sockets and real OpenAI construction; two completed runs passed.",
+      "B01 external identity helper initially referenced nonexistent sys.flags.write_bytecode; corrected to dont_write_bytecode, then passed. No product/test/source-distributed input changed."
+    ],
+    "pytest_warnings": "No warning summary in final full suite; standalone evaluator notices separately recorded",
+    "b01_fresh_focused": {
+      "passed": 84,
+      "failed": 0,
+      "skipped": 0,
+      "seconds": 145.04,
+      "files": [
+        "tests/test_t012_release.py",
+        "tests/test_t011_acceptance.py",
+        "tests/test_ui_browser_qa.py",
+        "tests/test_ui_packaging.py"
+      ],
+      "installed_fixture_provenance": "Actual newly installed fresh-env, separate existing QA/dev tools only",
+      "full_suite_repeated": false,
+      "previous_full_967": "Retained with original existing-populated-environment provenance; no source/test change requiring repetition"
+    },
+    "b01_additional_native_observations": {
+      "count": 3,
+      "cases": [
+        "module --version",
+        "console --version",
+        "module single demo"
+      ],
+      "passed": 3,
+      "pytest_tests": false,
+      "not_added_to_pytest_count": true
+    },
+    "b01_fresh_receipts": {
+      "native_count": 20,
+      "browser_sets": [
+        {
+          "evidence": "pytest-fresh-a1/test_actual_installed_browser_0/browser-evidence/browser-evidence.json",
+          "mode": "full",
+          "status": "PASS",
+          "browser": "155.0.8059.79",
+          "child_receipts": 2,
+          "forbidden_child_attempts": 0,
+          "unexpected_console_errors": 0,
+          "report_fidelity_checks": 4,
+          "route_observations": 200,
+          "denied_proxy_observations": 88,
+          "fresh_environment": true,
+          "expected_denial_console": 6
+        },
+        {
+          "evidence": "pytest-fresh-a1/test_actual_installed_browser_1/browser-evidence/browser-evidence.json",
+          "mode": "full",
+          "status": "PASS",
+          "browser": "152.0.4191.53",
+          "child_receipts": 2,
+          "forbidden_child_attempts": 0,
+          "unexpected_console_errors": 0,
+          "report_fidelity_checks": 4,
+          "route_observations": 200,
+          "denied_proxy_observations": 80,
+          "fresh_environment": true,
+          "expected_denial_console": 6
+        },
+        {
+          "evidence": "pytest-fresh-a1/test_t011_initial_installed_br0/evidence/browser-evidence.json",
+          "mode": "smoke",
+          "status": "PASS",
+          "browser": "155.0.8059.79",
+          "child_receipts": 1,
+          "forbidden_child_attempts": 0,
+          "unexpected_console_errors": 0,
+          "report_fidelity_checks": 1,
+          "route_observations": 22,
+          "denied_proxy_observations": 16,
+          "fresh_environment": true,
+          "expected_denial_console": 0
+        }
+      ],
+      "browser_children": 5,
+      "full_report_fidelity_comparisons": 9,
+      "forbidden_child_attempts": 0,
+      "browser_network_note": "Routes allow only owned application origins; deny-only local proxy may record blocked background traffic. Denied proxy observations are not claimed to be zero browser attempts or provider calls.",
+      "resource_cleanup": "Unchanged harnesses closed owned native process jobs and browser/server children; startup/shutdown and constructor/cancellation cleanup cases passed."
+    }
+  },
+  "acceptance": {
+    "AC-01": "PASS: baseline, scope, dirty tree and evidence origins explicit",
+    "AC-02": "PASS: English documentation/examples/links; fresh installation verified under AC-07 and AC-08",
+    "AC-03": "PASS: exact owner-approved MIT header/body/metadata; third-party rights not certified",
+    "AC-04": "PASS: version0.1.0 and draft tag/title only",
+    "AC-05": "PASS: inspected wheel/sdist members, metadata/license/runtime payloads and exclusions",
+    "AC-06": "PASS: exact artifact hashes and frozen dirty-source provenance; non-circular manifest",
+    "AC-07": "PASS: proven empty environment -> 43 exact locked/project distributions; offline/no-index/hash-required binary installation",
+    "AC-08": "PASS: actual newly installed native console/module/browser journeys, 47 members, license/metadata and installed RECORD verified",
+    "AC-09": "PASS: safely unpacked sdist rebuilt outside checkout; all member payloads and wheel bytes equal",
+    "AC-10": "PASS: explicit USD0 examples; synthetic demo/rate template unchanged",
+    "AC-11": "PASS: release draft/checklist and pending publication identity; no invented URLs/support",
+    "AC-12": "PASS: production/dependency/evaluation/T011 contracts unchanged",
+    "AC-13": "PASS: 84 relevant fresh-bound tests and 3 additional native observations; prior 967 full suite retained accurately, frozen source unchanged",
+    "AC-14": "PASS: no publication action"
+  },
+  "limits": [
+    "Python3.11 and other environments NOT VERIFIED",
+    "Real providers, price authority/invoices, actual-model quality and T006B NOT VERIFIED",
+    "Process-local sessions; no persistent history/durable exactly-once guarantee",
+    "Archive pattern scan is not universal secret detection or legal clearance",
+    "Master FINAL PASS is limited to local offline preparation; separate user publication authorization and actual commit/artifact reconciliation remain required.",
+    "Historical populated-environment regression evidence and newly installed fresh-environment evidence remain separately attributed."
+  ],
+  "publication": {
+    "target_ownership_visibility": "NOT VERIFIED",
+    "actual_future_commit": "PENDING user commit and source/artifact reconciliation; no guessed future hash",
+    "published": false
+  },
+  "master_preparation_review": {
+    "date": "2026-10-14",
+    "decision": "PREPARATION CHECKS PASS; B01 requires fresh installation and installed workflows",
+    "independent_focused_tests": {
+      "passed": 50,
+      "failed": 0,
+      "skipped": 0
+    },
+    "full_967_not_independently_reproduced": true,
+    "provenance": "User-supplied T-012 Master Release Readiness Review"
+  },
+  "prerequisite_authorization": {
+    "official_locked_runtime_download_authorized": true,
+    "authorization_source": "Owner authorization recorded in Master Release Readiness Review; same scope not re-asked",
+    "used": false,
+    "downloaded_wheels": 0,
+    "reused_original_wheels": 42,
+    "source": "Previously existing original wheelhouse, not installed/unpacked package trees",
+    "lock_sha256": "375a459c3c3bdf137a1e22f8bc8095b37080c8cc2dc82462908910c28f33efe4",
+    "compatible_runtime_closure": 42,
+    "verification": "Each selected original filename, locked version, official lock URL, byte size, SHA256, filename and internal WHEEL tags, METADATA name/version and Requires-Python verified; pure-Python/CPython Windows tags evaluated against actual CPython3.12 tags."
+  },
+  "fresh_install_history": [
+    {
+      "status": "BLOCKED",
+      "existing_interpreter": "CPython3.12.14 win-amd64",
+      "genuinely_new_environment_created": true,
+      "distributions_before_install": 0,
+      "distributions_after_failed_resolution": 0,
+      "cached_offline_resolution_attempts": 2,
+      "diagnosis": "Both the default sandbox cache and explicitly selected existing local uv cache could not resolve required Windows/Python3.12 registry wheel records offline. Prepared payload directories alone did not make those records usable.",
+      "unavailable_reported_packages": [
+        "xxhash==4.0.1",
+        "jiter==0.17.0",
+        "pydantic-core==2.46.5",
+        "pyyaml==6.0.3",
+        "ormsgpack==1.12.2",
+        "websockets==16.1.1",
+        "uuid-utils==0.17.1",
+        "orjson==3.12.0"
+      ],
+      "downloads_attempted": false,
+      "old_environment_copied": false,
+      "version_constraints_relaxed": false,
+      "fresh_installed_cli_ui_and_member_identity": "NOT EXECUTED; installation gate blocked",
+      "smallest_next_prerequisite": "Provide reviewed compatible local wheel/cache artifacts matching the unchanged lock, or separately authorize a tightly scoped prerequisite remedy; no download is authorized here."
+    }
+  ],
+  "master_final_review": {
+    "date": "2026-10-14",
+    "decision": "FINAL PASS",
+    "scope": "T-012 local offline preview preparation and verification only",
+    "blocker_B01": "CLOSED",
+    "provenance": "User-supplied second T-012 Master Release Readiness Review dated 2026-10-14",
+    "independent_verification": [
+      "42-wheel applicable lock closure and original wheel hash/metadata/tag checks",
+      "Guarded fresh-installed identity reproduced: 43 distributions, 47 runtime files and RECORD checks",
+      "124 frozen source inputs, 191 indexed files, wheel/sdist/rebuild/T011 preservation and four checksums",
+      "20 native receipts, 3 browser sets, 5 children and 9 fidelity comparisons inspected"
+    ],
+    "not_independently_rerun": [
+      "Installation",
+      "Native/browser journeys",
+      "Codex 84-test suite",
+      "Previous Codex 967-test suite"
+    ],
+    "test_attribution": "Codex 84 fresh-bound tests, 3 separate native observations and earlier 967-test suite retain their original attribution; Master 50 earlier focused tests remain separate; overlapping evidence is not summed",
+    "publication": "Not performed or authorized; actual later commit/source/artifact reconciliation and explicit owner publication instructions remain required"
+  }
+}
