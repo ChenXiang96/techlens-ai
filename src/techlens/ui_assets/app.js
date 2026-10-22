@@ -30,8 +30,8 @@ async function sendLast(submission=state.last){if(!submission)throw new Error("N
 async function readMutation(path,body){return(await api(path,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)})).json();}
 function guarded(fn){return async event=>{if(event)event.preventDefault();const selection=state.selection;try{await fn();}catch(e){if(selection===state.selection)message(e.message,true);}};}
 function actionGuard(fn){return guarded(async()=>{if(state.submitting)return;state.submitting=true;$("action-status").textContent="Submission in progress. Overlapping submissions are ignored; no automatic retry.";
-  for(const id of["request-form","start-demo","retry-action","plan-editor"])$(id).setAttribute("aria-busy","true");
-  try{return await fn();}finally{state.submitting=false;$("action-status").textContent="No submission in progress.";for(const id of["request-form","start-demo","retry-action","plan-editor"])$(id).setAttribute("aria-busy","false");}});}
+  for(const id of["request-form","start-demo","retry-action","plan-editor","saved-form"])$(id).setAttribute("aria-busy","true");
+  try{return await fn();}finally{state.submitting=false;$("action-status").textContent="No submission in progress.";for(const id of["request-form","start-demo","retry-action","plan-editor","saved-form"])$(id).setAttribute("aria-busy","false");}});}
 function button(text,fn){const b=node("button",text);b.type="button";b.addEventListener("click",guarded(fn));return b;}
 function input(label,value="",maximum=256,tag="input"){const l=node("label",label);const i=node(tag);i.value=value;i.maxLength=maximum;l.append(i);return {label:l,input:i};}
 function listEditor(container,title,values,maximum=20,itemLength=256){container.replaceChildren(node("h4",title));const rows=node("div");container.append(rows);
@@ -50,7 +50,7 @@ async function prepare(){const selection=state.selection;const f={assessment_id:
   const boot=await bootstrap();if(selection!==state.selection)return;await submit("/api/requests/prepare",boot.actions.prepare,boot.revision,f);}
 async function prepared(id){const selection=state.selection;const value=await read(`/api/requests/${id}`);if(selection!==state.selection)return;$("prepared-summary").replaceChildren(data(value));$("prepared").hidden=false;$("download-request").onclick=guarded(()=>download(`/api/requests/${id}/download`,"techlens-request.json"));}
 async function download(path,name){const r=await api(path);const url=URL.createObjectURL(await r.blob());const a=node("a");a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);}
-function journey(demo){$("request-journey").hidden=demo;$("demo-journey").hidden=!demo;$("request-tab").setAttribute("aria-pressed",String(!demo));$("demo-tab").setAttribute("aria-pressed",String(demo));}
+function journey(demo){const saved=demo==="saved";$("request-journey").hidden=demo!==false;$("demo-journey").hidden=demo!==true;$("saved-journey").hidden=!saved;$("demo-notice").hidden=saved;$("request-tab").setAttribute("aria-pressed",String(demo===false));$("demo-tab").setAttribute("aria-pressed",String(demo===true));$("saved-tab").setAttribute("aria-pressed",String(saved));}
 async function refresh(){const rid=state.runId,generation=++state.reading,selection=state.selection;if(!rid)return;
   const current=()=>state.runId===rid&&state.reading===generation&&state.selection===selection;
   let r=await read(`/api/runs/${rid}`);if(!current())return;
@@ -91,3 +91,39 @@ $("download-plan").onclick=guarded(()=>download(`/api/runs/${state.runId}/downlo
 $("report-toggle").onclick=()=>{state.full=!state.full;renderReport();};
 guarded(async()=>{await bootstrap();const saved=sessionStorage.getItem("techlens-run");if(saved){state.runId=saved;journey(true);await refresh();}const id=sessionStorage.getItem("techlens-request");if(id)await prepared(id);})();
 setInterval(async()=>{if(state.polling||!state.run||!state.run.active)return;state.polling=true;try{await refresh();}catch(e){message(e.message,true);}finally{state.polling=false;}},700);
+
+// Saved views have separate identities, revisions and response generations. No
+// upload, saved identifier or action capability is persisted in browser storage.
+const savedState={listing:null,id:null,view:null,full:false,reading:0,listingReading:0,fileGeneration:0};
+$("saved-files").onchange=()=>{++savedState.fileGeneration;++state.selection;++savedState.reading;};
+async function savedList(){const generation=++savedState.listingReading,selection=state.selection;const listing=await read("/api/saved-reports");if(generation!==savedState.listingReading||selection!==state.selection)return;
+  savedState.listing=listing;const picker=$("saved-picker");picker.replaceChildren(node("option","Choose an opened saved report"));picker.firstChild.value="";
+  for(const v of listing.views){const option=node("option",`${v.assessment_id} · ${v.status} · ${v.id.slice(0,14)}`);option.value=v.id;picker.append(option);}picker.value=savedState.id||"";
+  if(savedState.id&&!listing.views.some(v=>v.id===savedState.id)){savedState.id=null;savedState.view=null;++savedState.reading;$("saved-panel").hidden=true;}}
+async function savedRead(){const id=savedState.id,generation=++savedState.reading,selection=state.selection;if(!id)return;
+  const view=await read(`/api/saved-reports/${id}`);if(id!==savedState.id||generation!==savedState.reading||selection!==state.selection)return;
+  savedState.view=view;renderSaved();$("saved-panel").hidden=false;}
+function renderSaved(){const v=savedState.view,r=v.snapshot.report;$("saved-report-heading").textContent=`Imported ${r.status} saved report — read-only`;
+  $("saved-checks").textContent=v.notice;$("saved-provenance").replaceChildren(node("h4","File-declared provenance (not authenticated)"),data({schema_version:v.snapshot.schema_version,mode:v.snapshot.mode,provenance:v.snapshot.provenance}),data(v.checks));
+  const root=$("saved-display");root.replaceChildren(node("p",r.summary),data({assessment_id:r.assessment_id,status:r.status,candidate_ids:r.candidate_ids,candidate_names:r.candidate_names,candidates:v.snapshot.candidates,team_profile:r.team_profile,priorities:r.priorities}),node("h4","Candidate analysis and comparison"),data({analyses:r.analyses,comparison:r.comparison}));
+  root.append(node("h4","Claim → evidence references"));for(const claim of r.claims){const div=node("div",undefined,"record");div.append(node("h4",claim.claim_id),node("p",claim.statement),data({candidate_ids:claim.candidate_ids,evidence_ids:claim.evidence_ids}));root.append(div);}
+  root.append(node("h4","13 report sections"));for(const s of r.sections){const div=node("div",undefined,"record");div.append(node("h4",`${s.number}. ${s.title} · ${s.status}`),data({claim_ids:s.claim_ids,risk_flag_ids:s.risk_flag_ids,limitation_ids:s.limitation_ids}));if(savedState.full)div.append(node("p",s.text));root.append(div);}
+  root.append(node("h4","Risk observations and provenance"),data(r.risk_flags),node("h4","Source URLs (display only; no fetching)"),data(r.sources),node("h4","Research notes and limitations"),data(r.research_notes),node("h4","Accounting and completeness (file-declared)"),data(r.metrics));
+  $("saved-toggle").textContent=savedState.full?"Show saved summary":"Show full saved report";$("saved-toggle").setAttribute("aria-pressed",String(savedState.full));}
+$("saved-tab").onclick=guarded(async()=>{++state.selection;journey("saved");await savedList();if(savedState.id)await savedRead();});
+$("saved-picker").onchange=guarded(async()=>{++state.selection;++savedState.reading;savedState.id=$("saved-picker").value;savedState.view=null;$("saved-panel").hidden=true;await savedRead();});
+$("saved-refresh").onclick=guarded(async()=>{await savedList();if(savedState.id)await savedRead();});
+$("saved-toggle").onclick=()=>{savedState.full=!savedState.full;renderSaved();};
+$("saved-close").onclick=actionGuard(async()=>{const view=savedState.view,selection=state.selection;if(!view)throw new Error("No saved view selected.");
+  await readMutation(`/api/saved-reports/${view.id}/close`,{token:view.close_token,revision:view.revision,data:{}});
+  if(selection!==state.selection||savedState.id!==view.id)return;++savedState.reading;savedState.id=null;savedState.view=null;$("saved-panel").hidden=true;await savedList();});
+$("saved-form").onsubmit=actionGuard(async()=>{const selection=state.selection,fileGeneration=savedState.fileGeneration;
+  const current=()=>selection===state.selection&&fileGeneration===savedState.fileGeneration;let payload=null;try{
+  const chosen=[...$("saved-files").files],zip=chosen.length===1&&chosen[0].name.endsWith(".zip");
+  if(!zip&&(chosen.length!==3||new Set(chosen.map(f=>f.name)).size!==3||!chosen.every(f=>["report.json","report.md","manifest.json"].includes(f.name))))throw new Error("Choose one ZIP or exactly report.json, report.md and manifest.json.");
+  const files=[];for(const file of chosen){const limit=zip?5*1024**2:file.name==="manifest.json"?8192:2*1024**2;if(file.size>limit)throw new Error("Selected saved file exceeds its size limit.");
+    const bytes=new Uint8Array(await file.arrayBuffer());if(!current())return;let encoded="";for(let i=0;i<bytes.length;i+=32768)encoded+=String.fromCharCode(...bytes.subarray(i,i+32768));files.push({name:file.name,base64:btoa(encoded)});}
+  await savedList();if(!current())return;const listing=savedState.listing;payload={token:listing.open_token,revision:listing.revision,data:{format:zip?"zip":"files",files}};
+  const receipt=await readMutation("/api/saved-reports/open",payload);if(!current())return;if(receipt.status!=="opened")throw new Error(receipt.error||"Saved report was not opened.");
+  savedState.id=receipt.saved_id;savedState.full=false;await savedList();if(!current())return;await savedRead();if(current())message("Saved file checks completed. Read-only snapshot; no assessment was started.");
+}finally{payload=null;if(fileGeneration===savedState.fileGeneration)$("saved-files").value="";}});

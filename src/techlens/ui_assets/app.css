@@ -14,3 +14,6 @@ button{font:600 .95rem/1.4 system-ui;cursor:pointer;min-height:44px;border:1px s
 .data{white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;font: .87rem/1.65 ui-monospace,monospace;background:#fff;border:1px solid var(--line);border-radius:6px;padding:1rem;max-width:100%;margin:.5rem 0}
 .record{border-top:1px solid var(--line);padding:.75rem 0;overflow-wrap:anywhere}.record h4{margin:.3rem 0}.changed{border-left:4px solid #bd7920;padding-left:.75rem}footer{text-align:center;border-top:1px solid var(--line);padding:1.5rem;font-size:.85rem}
 [hidden]{display:none!important}@media(max-width:600px){header{padding:1.5rem 1rem}main{padding:1rem}.badge{margin-left:0}button{max-width:100%;overflow-wrap:anywhere}.grid{display:block}}
+/* Saved reports share inert text components, never Markdown/HTML rendering. */
+#saved-files { max-width: 100%; }
+#saved-provenance { border-left: 3px solid #9b7a15; padding-left: .8rem; }

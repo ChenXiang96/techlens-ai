@@ -11,7 +11,7 @@ const {chromium} = require(process.env.TECHLENS_PLAYWRIGHT);
 const output = process.argv[2];
 fs.mkdirSync(output,{recursive:true});
 const events=[],errors=[],denied=[],consoleDenials=[],regressions=[];
-const fidelity=[];
+const fidelity=[],savedFidelity=[],savedUploadRaces=[],savedInvalid=[];
 // Playwright uses child pipes. This parent has no permitted outbound socket.
 net.Socket.prototype.connect = function(){throw new Error("QA parent denies outbound sockets");};
 // Independent deny-only proxy: never resolves/forwards any request.
@@ -19,7 +19,7 @@ const proxy=http.createServer((req,res)=>{denied.push("proxy-http");res.writeHea
 proxy.on("connect",(req,socket)=>{socket.on("error",()=>{});denied.push("proxy-connect");socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");});
 proxy.on("clientError",(error,socket)=>{socket.on("error",()=>{});socket.destroy();});
 function listen(server){return new Promise(resolve=>server.listen(0,"127.0.0.1",resolve));}
-function child(){const p=spawn(process.env.TECHLENS_UI_PYTHON,["-B",path.join(__dirname,"ui_browser_server.py")],{cwd:process.env.TECHLENS_UI_CWD||path.resolve(__dirname,".."),env:{...process.env,PYTHONDONTWRITEBYTECODE:"1"},stdio:["pipe","pipe","pipe"]});
+function child(importOnly=false){const p=spawn(process.env.TECHLENS_UI_PYTHON,["-B",path.join(__dirname,"ui_browser_server.py")],{cwd:process.env.TECHLENS_UI_CWD||path.resolve(__dirname,".."),env:{...process.env,PYTHONDONTWRITEBYTECODE:"1",TECHLENS_IMPORT_ONLY:importOnly?"1":"0"},stdio:["pipe","pipe","pipe"]});
   p.stderr.on("data",()=>errors.push("Python child emitted stderr"));const lines=readline.createInterface({input:p.stdout});let first=true;return new Promise((resolve,reject)=>{p.on("error",reject);p.once("exit",c=>{if(first)reject(new Error("Server failed before startup"));});lines.on("line",line=>{if(first){first=false;resolve({p,origin:line,receipt:null,lines});}else{try{events.push({child:JSON.parse(line)});}catch{errors.push("Unexpected child output");}}});});}
 async function shutdown(server){const exited=new Promise(resolve=>server.p.once("exit",resolve));server.p.stdin.end("stop\n");assert.equal(await exited,0);}
 async function main(){await listen(proxy);const server=await child();assert.match(server.origin,/^http:\/\/127\.0\.0\.1:\d+$/);
@@ -178,10 +178,80 @@ async function main(){await listen(proxy);const server=await child();assert.matc
   // Concurrent tab reuses owner. No security capability appears in public DOM/report.
   const tab=await p.context().newPage();await tab.goto(server.origin);await tab.locator("#demo-tab").click();assert.equal((await p.context().cookies()).length,1);
   assert.equal(await p.evaluate(()=>window.__bad),undefined);
+  // T-013: explicit file inputs, not filesystem paths sent to the application.
+  // Export fixtures were made in a separate parent setup phase, not imports.
+  const fixtureRoot=process.env.TECHLENS_SAVED_FIXTURES;
+  async function openSaved(page,status,format){await page.locator("#saved-tab").click();await page.waitForFunction(()=>savedState.listing!==null);
+    const dir=path.join(fixtureRoot,status),names=format==="zip"?["saved.zip"]:["report.json","report.md","manifest.json"];
+    await page.locator("#saved-files").setInputFiles(names.map(n=>path.join(dir,n)));await page.locator('#saved-form button[type="submit"]').click();await page.locator("#saved-panel").waitFor({state:"visible"});await idle(page);
+    const expected=JSON.parse(fs.readFileSync(path.join(dir,"report.json"),"utf8")),r=expected.report;
+    assert(await page.locator("#demo-notice").isHidden());assert((await page.locator("#saved-checks").textContent()).includes("origin is not authenticated"));
+    assert.deepEqual(await page.evaluate(()=>savedState.view.snapshot),expected);
+    if(await page.locator("#saved-toggle").getAttribute("aria-pressed")!=="true")await page.locator("#saved-toggle").click();
+    const blocks=(await page.locator("#saved-display > pre").allTextContents()).map(JSON.parse);
+    assert.deepEqual(blocks,[{assessment_id:r.assessment_id,status:r.status,candidate_ids:r.candidate_ids,candidate_names:r.candidate_names,candidates:expected.candidates,team_profile:r.team_profile,priorities:r.priorities},{analyses:r.analyses,comparison:r.comparison},r.risk_flags,r.sources,r.research_notes,r.metrics]);
+    const records=page.locator("#saved-display > .record");assert.equal(await records.count(),r.claims.length+13);assert.equal(await page.locator("#saved-display > p").textContent(),r.summary);
+    for(let i=0;i<r.claims.length;i++){const c=r.claims[i],row=records.nth(i);assert.equal(await row.locator("p").textContent(),c.statement);assert.equal(await row.locator("h4").textContent(),c.claim_id);assert.deepEqual(JSON.parse(await row.locator("pre").textContent()),{candidate_ids:c.candidate_ids,evidence_ids:c.evidence_ids});}
+    for(let i=0;i<13;i++){const s=r.sections[i],row=records.nth(r.claims.length+i);assert.equal(await row.locator("h4").textContent(),`${s.number}. ${s.title} · ${s.status}`);assert.equal(await row.locator("p").textContent(),s.text);assert.deepEqual(JSON.parse(await row.locator("pre").textContent()),{claim_ids:s.claim_ids,risk_flag_ids:s.risk_flag_ids,limitation_ids:s.limitation_ids});}
+    assert.equal(await page.locator("#saved-display a, #saved-display script, #saved-display img").count(),0);
+    return {status:r.status,format,id:await page.locator("#saved-picker").inputValue(),all_fields_and_sections:true};}
+  for(const status of["completed","comparison","partial","rejected","failed","failed-observations"]){for(const format of["zip","files"]){const page=format==="zip"?p:q;const item=await openSaved(page,status,format);savedFidelity.push(item);if(status==="failed"&&format==="zip")await page.screenshot({path:path.join(output,"09-saved-report.png"),fullPage:true});await page.locator("#saved-close").click();await page.locator("#saved-panel").waitFor({state:"hidden"});await idle(page);}}
+  // Malformed upload displays fixed error, then a fresh deliberate valid upload works.
+  await p.locator("#saved-files").setInputFiles({name:"bad.zip",mimeType:"application/zip",buffer:Buffer.from("not a zip")});await p.locator('#saved-form button[type="submit"]').click();await idle(p);assert((await p.locator("#message").textContent()).includes("check failed"));
+  // A fresh owner isolates the bounded saved receipt budget from prior samples.
   const browserVersion=browser.version();for(const context of contexts)await context.close();await browser.close();await shutdown(server);
   // Real process restart with stale sessionStorage/cookie; never recreate old run.
-  const restarted=await child();const browser2=await chromium.launch({executablePath:process.env.TECHLENS_CHROME,headless:true,proxy:{server:`http://127.0.0.1:${proxy.address().port}`,bypass:"127.0.0.1"},args:["--disable-background-networking","--disable-component-update","--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1"]});
-  const rc=await browser2.newContext({serviceWorkers:"block"});await rc.route("**/*",r=>new URL(r.request().url()).origin===restarted.origin?r.continue():r.abort());await rc.addCookies(initial.map(c=>({...c,domain:"127.0.0.1"})));await rc.addInitScript(()=>sessionStorage.setItem("techlens-run","a".repeat(32)));const rp=await rc.newPage();await rp.goto(restarted.origin);await rp.waitForFunction(()=>document.querySelector("#message").textContent.includes("unavailable"));assert(await rp.locator("#plan-panel").isHidden());await browser2.close();await shutdown(restarted);
+  const restarted=await child(true);const browser2=await chromium.launch({executablePath:process.env.TECHLENS_CHROME,headless:true,proxy:{server:`http://127.0.0.1:${proxy.address().port}`,bypass:"127.0.0.1"},args:["--disable-background-networking","--disable-component-update","--host-resolver-rules=MAP * ~NOTFOUND, EXCLUDE 127.0.0.1"]});
+  const rc=await browser2.newContext({serviceWorkers:"block"});await rc.route("**/*",r=>new URL(r.request().url()).origin===restarted.origin?r.continue():r.abort());await rc.addCookies(initial.map(c=>({...c,domain:"127.0.0.1"})));await rc.addInitScript(()=>sessionStorage.setItem("techlens-run","a".repeat(32)));const rp=await rc.newPage();await rp.goto(restarted.origin);await rp.waitForFunction(()=>document.querySelector("#message").textContent.includes("unavailable"));assert(await rp.locator("#plan-panel").isHidden());
+  await rp.locator("#saved-tab").click();await rp.waitForFunction(()=>savedState.listing!==null);assert.deepEqual(await rp.evaluate(()=>savedState.listing.views),[]);
+  for(const format of["zip","files"]){await openSaved(rp,format==="zip"?"completed":"partial",format);}
+  // Controlled delayed read cannot replace a newer selected imported report.
+  const savedIds=await rp.locator("#saved-picker option").evaluateAll(o=>o.map(v=>v.value).filter(Boolean));assert.equal(savedIds.length,2);
+  const firstView=await rp.evaluate(id=>read(`/api/saved-reports/${id}`),savedIds[0]);let releaseSaved,enteredSaved;const savedHeld=new Promise(r=>releaseSaved=r),savedEntered=new Promise(r=>enteredSaved=r);
+  await rp.route(`**/api/saved-reports/${savedIds[0]}`,async route=>{enteredSaved();await savedHeld;await route.fulfill({status:200,contentType:"application/json",body:JSON.stringify(firstView)});});
+  await rp.locator("#saved-picker").selectOption(savedIds[0]);await savedEntered;await rp.locator("#saved-picker").selectOption(savedIds[1]);await rp.locator("#saved-panel").waitFor({state:"visible"});releaseSaved();await rp.evaluate(()=>new Promise(r=>requestAnimationFrame(()=>requestAnimationFrame(r))));assert.equal(await rp.evaluate(()=>savedState.view.id),savedIds[1]);
+  await rp.locator("#saved-close").click();await rp.locator("#saved-panel").waitFor({state:"hidden"});await idle(rp);assert.equal(await rp.locator("#saved-picker option").count(),2);
+  assert.equal(await rp.evaluate(()=>sessionStorage.getItem("techlens-run")),"a".repeat(32));assert.equal(await rp.evaluate(()=>Object.keys(sessionStorage).some(k=>k.includes("saved"))),false);
+  await rp.unroute(`**/api/saved-reports/${savedIds[0]}`);
+  await openSaved(rp,"hostile","files");assert.equal(await rp.evaluate(()=>window.__savedBad),undefined);assert.equal(await rp.locator("#saved-display img, #saved-display script, #saved-display a").count(),0);
+  const savedRestart={zip_reopened:true,files_reopened:true,old_run_unavailable:true,stale_read_ignored:true,close_removed_view:true,hostile_text_inert:true};
+  await rp.screenshot({path:path.join(output,"10-reopened-after-restart.png"),fullPage:true});
+  async function closeSavedViews(page){await page.evaluate(async()=>{const list=await read("/api/saved-reports");for(const item of list.views){const view=await read(`/api/saved-reports/${item.id}`);await readMutation(`/api/saved-reports/${item.id}/close`,{token:view.close_token,revision:view.revision,data:{}});}++state.selection;++savedState.reading;savedState.id=null;savedState.view=null;$("saved-panel").hidden=true;await savedList();});}
+  await closeSavedViews(rp);
+  // F-01: actual selected File bytes, with deterministic barriers, not sleeps.
+  // During file reading A must never reach transport; during the held actual
+  // response A may finish server-side but must not install/clear over B.
+  for(const stage of["file-read","open-response"]){
+    await rp.evaluate(stage=>{window.__uploadEntered=false;window.__uploadPosts=0;window.__uploadReceipt=null;
+      window.__savedFetch=window.fetch;window.fetch=async(...args)=>{if(args[0]==="/api/saved-reports/open"&&args[1]?.method==="POST"){window.__uploadPosts++;const response=await window.__savedFetch(...args);if(stage==="open-response"&&window.__uploadPosts===1){window.__uploadReceipt=await response.clone().json();window.__uploadEntered=true;await new Promise(r=>window.__releaseUpload=r);}return response;}return window.__savedFetch(...args);};
+      window.__savedArrayBuffer=File.prototype.arrayBuffer;if(stage==="file-read")File.prototype.arrayBuffer=async function(){const bytes=await window.__savedArrayBuffer.call(this);if(this.name==="A.zip"){window.__uploadEntered=true;await new Promise(r=>window.__releaseUpload=r);}return bytes;};
+      window.__savedSubmit=$("saved-form").onsubmit;$("saved-form").onsubmit=event=>{window.__uploadCompletion=window.__savedSubmit(event);return window.__uploadCompletion;};},stage);
+    const A={name:"A.zip",mimeType:"application/zip",buffer:fs.readFileSync(path.join(fixtureRoot,"completed/saved.zip"))},B={name:"B.zip",mimeType:"application/zip",buffer:fs.readFileSync(path.join(fixtureRoot,"partial/saved.zip"))};
+    await rp.locator("#saved-files").setInputFiles(A);await rp.locator('#saved-form button[type="submit"]').click();await rp.waitForFunction(()=>window.__uploadEntered);
+    const beforeGeneration=await rp.evaluate(()=>savedState.fileGeneration);await rp.locator("#saved-files").setInputFiles(B);assert.equal(await rp.evaluate(()=>savedState.fileGeneration),beforeGeneration+1);
+    await rp.evaluate(()=>message("New B selection awaits an explicit submission."));
+    // A second click while A is active is ignored, never queued as a B retry.
+    await rp.locator('#saved-form button[type="submit"]').click();await rp.evaluate(()=>window.__releaseUpload());
+    await rp.waitForFunction(()=>!state.submitting);await rp.evaluate(()=>window.__uploadCompletion);await idle(rp);
+    assert.deepEqual(await rp.locator("#saved-files").evaluate(e=>[...e.files].map(f=>f.name)),["B.zip"]);
+    assert(await rp.locator("#saved-panel").isHidden());assert.equal(await rp.evaluate(()=>savedState.view),null);
+    assert.equal(await rp.locator("#message").textContent(),"New B selection awaits an explicit submission.");
+    const beforePosts=await rp.evaluate(()=>window.__uploadPosts);assert.equal(beforePosts,stage==="file-read"?0:1);
+    await rp.evaluate(()=>{File.prototype.arrayBuffer=window.__savedArrayBuffer;});
+    // B starts only from this NEW explicit user action, exactly once.
+    await rp.locator('#saved-form button[type="submit"]').click();await rp.locator("#saved-panel").waitFor({state:"visible"});await idle(rp);
+    assert.equal(await rp.evaluate(()=>window.__uploadPosts),beforePosts+1);assert.equal(await rp.evaluate(()=>savedState.view.snapshot.report.status),"partial");
+    if(stage==="open-response"){const receipt=await rp.evaluate(()=>window.__uploadReceipt);const listing=await rp.evaluate(()=>read("/api/saved-reports"));assert(listing.views.some(v=>v.id===receipt.saved_id));assert.notEqual(receipt.saved_id,await rp.evaluate(()=>savedState.id));}
+    savedUploadRaces.push({stage,new_selection_preserved:true,no_stale_view_or_message:true,before_explicit_B_posts:beforePosts,after_explicit_B_posts:beforePosts+1});
+    await rp.evaluate(()=>{window.fetch=window.__savedFetch;$("saved-form").onsubmit=window.__savedSubmit;});await closeSavedViews(rp);
+  }
+  // A distinct import-only owner gets its own bounded receipt budget for four
+  // verifier rejections. No fixture setup/session/graph runs in this child.
+  const invalidContext=await browser2.newContext({serviceWorkers:"block"});await invalidContext.route("**/*",r=>new URL(r.request().url()).origin===restarted.origin?r.continue():r.abort());const invalidPage=await invalidContext.newPage();await invalidPage.goto(restarted.origin);await invalidPage.locator("#saved-tab").click();await invalidPage.waitForFunction(()=>savedState.listing!==null);
+  for(const status of["invalid-elapsed","invalid-failed"]){for(const format of["zip","files"]){const dir=path.join(fixtureRoot,status),names=format==="zip"?["saved.zip"]:["report.json","report.md","manifest.json"];
+    await invalidPage.locator("#saved-files").setInputFiles(names.map(n=>path.join(dir,n)));await invalidPage.locator('#saved-form button[type="submit"]').click();await idle(invalidPage);
+    assert.equal(await invalidPage.locator("#message").textContent(),"Saved report file or supported structure check failed.");assert(await invalidPage.locator("#saved-panel").isHidden());assert.deepEqual(await invalidPage.evaluate(async()=>(await read("/api/saved-reports")).views),[]);savedInvalid.push({status,format,rejected:true});}}
+  await browser2.close();await shutdown(restarted);
   proxy.close();const receipts=events.filter(e=>e.child).map(e=>e.child);assert.equal(receipts.length,2);assert(receipts.every(r=>r.network_attempts===0&&!r.forbidden_imports.length));assert.equal(receipts[1].runs,0);
   // Console favicon failures are not ignored: shell handles its fixed icon route locally.
   const sessions=receipts[0].sessions;const corrected=sessions.find(s=>s.run_id===reviewId);assert.equal(corrected.starts,1);assert.equal(corrected.resumes,1);assert.equal(corrected.objective,"Review proposal C");assert(sessions.every(s=>s.starts===1&&s.resumes<=1));assert.equal(sessions.length,7);
@@ -189,5 +259,5 @@ async function main(){await listen(proxy);const server=await child();assert.matc
   assert.equal(sessions.find(s=>s.run_id===planDownload.run_id).initial_plan_sha256,planDownload.sha256);
   const rejected=sessions.find(s=>s.authoritative_report?.status==="rejected");assert.equal(rejected.github,0);assert.equal(rejected.search,0);assert.equal(rejected.current_round,0);
   for(const item of fidelity){const authoritative=sessions.find(s=>s.run_id===item.run_id);assert.deepEqual(item.report,authoritative.authoritative_report);assert.equal(item.json_hash,authoritative.canonical_hashes["report.json"]);}
-  assert.deepEqual(errors,[]);assert.equal(consoleDenials.length,6);fs.writeFileSync(path.join(output,"browser-evidence.json"),JSON.stringify({status:"PASS",browser_version:browserVersion,planDownload,fidelity,events,regressions,deny_proxy_observations:denied,console_errors:errors,expected_denial_console:consoleDenials,journeys:["prepare-three-duplicates-exact-decimal-hostile","modify-preview-cancel-apply","refresh-identical-retry","full-downloads","narrow-keyboard","comparison","partial","reject","abandon","multi-tab","restart","overlapping-start-prepare","same-run-coherent-proposal","between-status-plan-change","delayed-mutation-selection"]},null,2));console.log("Browser walkthrough PASS; child provider/network attempts 0; sanitized evidence recorded.");}
+  assert.deepEqual(errors,[]);assert.equal(consoleDenials.length,6);fs.writeFileSync(path.join(output,"browser-evidence.json"),JSON.stringify({status:"PASS",browser_version:browserVersion,planDownload,fidelity,saved_fidelity:savedFidelity,saved_restart:savedRestart,saved_upload_races:savedUploadRaces,saved_invalid_metrics_and_failed:savedInvalid,events,regressions,deny_proxy_observations:denied,console_errors:errors,expected_denial_console:consoleDenials,journeys:["prepare-three-duplicates-exact-decimal-hostile","modify-preview-cancel-apply","refresh-identical-retry","full-downloads","narrow-keyboard","comparison","partial","reject","abandon","multi-tab","restart","overlapping-start-prepare","same-run-coherent-proposal","between-status-plan-change","delayed-mutation-selection","saved-zip-and-files","saved-field-fidelity","saved-explicit-reopen-after-restart","replace-selected-files-during-read-and-response","invalid-duration-and-failed-claim-rejection"]},null,2));console.log("Browser walkthrough PASS; child provider/network attempts 0; sanitized evidence recorded.");}
 main().catch(error=>{console.error(error.stack);process.exitCode=1;setTimeout(()=>process.exit(1),1000);});

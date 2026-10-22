@@ -15,6 +15,27 @@ socket.create_connection = denied
 os.environ["LANGSMITH_TRACING"] = "false"
 os.environ["LANGCHAIN_TRACING_V2"] = "false"
 
+import_only_attempts = []
+if os.environ.get("TECHLENS_IMPORT_ONLY") == "1":
+    # Install the execution sentinel BEFORE any TechLens import. A profile hook
+    # can reject construction even if an import unexpectedly tried to create a
+    # session/ledger before the explicit class patches below could be installed.
+    def preimport_execution_guard(frame, event, arg):
+        if event != "call":
+            return
+        module, name = frame.f_globals.get("__name__", ""), frame.f_code.co_name
+        instance = frame.f_locals.get("self")
+        cls = type(instance)
+        blocked = (module == "techlens.graph" and name == "build_graph" or
+            module == "techlens.authorization" and name == "authorize_live_run" or
+            name in {"__init__", "start", "resume"} and cls.__module__ == "techlens.application"
+                and cls.__name__ == "AssessmentSession" or
+            name == "__init__" and cls.__module__ == "techlens.budget" and cls.__name__ == "BudgetLedger")
+        if blocked:
+            import_only_attempts.append("preimport-execution")
+            raise RuntimeError("Import-only preimport guard forbids assessment execution")
+    sys.setprofile(preimport_execution_guard)
+
 import httpx
 import openai
 def forbidden(*args, **kwargs):
@@ -30,6 +51,17 @@ from techlens.application import private_execution
 from techlens.application import AssessmentSession
 from techlens.ui_coordinator import Coordinator
 from techlens.ui_server import LocalServer
+
+if os.environ.get("TECHLENS_IMPORT_ONLY") == "1":
+    # Installed product imports are complete, but no session/client/ledger has
+    # been constructed. All import journeys below must remain pure file work.
+    def execution_denied(*args, **kwargs):
+        import_only_attempts.append("execution")
+        raise RuntimeError("Import-only child forbids assessment execution")
+    import techlens.budget, techlens.graph
+    AssessmentSession.__init__ = execution_denied
+    techlens.graph.build_graph = execution_denied
+    techlens.budget.BudgetLedger.__init__ = execution_denied
 
 constructed_sessions = []
 class ObservedSession(AssessmentSession):
@@ -87,6 +119,7 @@ def observed(rid, run):
                 mode="demo", scenario=run.scenario).items()}
     return result
 encoded = json.dumps({"network_attempts": len(attempts), "runs": len(coordinator.runs),
+    "import_only_execution_attempts": len(import_only_attempts),
     "sessions_constructed": len(constructed_sessions),
     "terminal": sum(r.phase == "terminal" for r in coordinator.runs.values()),
     "module": __import__("techlens.ui_server", fromlist=["*"]).__file__,

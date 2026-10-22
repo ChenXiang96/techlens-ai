@@ -150,3 +150,14 @@ The UI is loopback-only and process-local, not hosted/LAN or multi-user software
 Live providers, invoices, real-model quality, T-006B, persistent crash recovery and
 unexecuted compatibility environments remain NOT VERIFIED. Keyboard/narrow-layout
 checks are practical usability evidence, not accessibility certification.
+
+## Optional: reopen exported files
+
+After downloading the report ZIP from a completed synthetic demonstration, choose
+**Open saved report**, select that ZIP and click **Check and open saved report**.
+Inspect the file-declared provenance, summary/full view, sources and accounting.
+Close the view, then select the three original files together to check that route.
+Stop/restart the server and explicitly reopen your files: the saved list starts
+empty and the original run remains unavailable. No assessment is resumed or
+executed. [Saved report documentation](saved-reports.md) explains the limited
+integrity checks; they do not authenticate the source or establish factual support.

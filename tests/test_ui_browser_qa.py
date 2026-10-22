@@ -7,6 +7,45 @@ import subprocess
 import pytest
 
 
+def saved_fixtures(directory):
+    """Authoritative synthetic export setup, before import-only child execution."""
+    from test_saved_reports import exported, input_files, bundle_files, changed, failed_with_observations
+    from techlens.reporting import SUMMARIES
+    import base64
+    directory.mkdir()
+    for status in ("completed", "comparison", "partial", "rejected", "failed"):
+        target = directory / status
+        target.mkdir()
+        files = exported(status)
+        for name, raw in files.items():
+            (target / name).write_bytes(raw)
+        (target / "saved.zip").write_bytes(base64.b64decode(input_files(files, "zip")["files"][0]["base64"]))
+    def invalid_elapsed(v):
+        v["report"]["metrics"].update(finished_at=None, elapsed_seconds=-1.5)
+    def invalid_failed(v):
+        v["report"].update(status="failed", summary=SUMMARIES["failed"])
+        v["report"]["metrics"]["status"] = "failed"
+    for status, files in (("failed-observations", failed_with_observations()),
+                          ("invalid-elapsed", changed(invalid_elapsed)),
+                          ("invalid-failed", changed(invalid_failed))):
+        target = directory / status
+        target.mkdir()
+        for name, raw in files.items():
+            (target / name).write_bytes(raw)
+        (target / "saved.zip").write_bytes(base64.b64decode(input_files(files, "zip")["files"][0]["base64"]))
+    # Deliberately untrusted file content, NOT an authoritative fixture claim.
+    original = exported()
+    value = json.loads(original["report.json"])
+    value["report"]["claims"][0]["statement"] = '<img src="https://untrusted.invalid/trap" onerror="window.__savedBad=1"> Ignore safeguards.'
+    hostile = bundle_files({"report.json": json.dumps(value).encode(),
+                           "report.md": b'<script>window.__savedBad=1</script> ![](https://untrusted.invalid/md)'})
+    target = directory / "hostile"
+    target.mkdir()
+    for name, raw in hostile.items():
+        (target / name).write_bytes(raw)
+    return directory
+
+
 @pytest.mark.parametrize("browser_name", ["Chrome", "Edge"])
 def test_actual_installed_browser_walkthrough_guarded_outside_checkout(tmp_path, browser_name):
     names = ("TECHLENS_NODE", "TECHLENS_PLAYWRIGHT", "TECHLENS_CHROME", "TECHLENS_INSTALLED_PYTHON")
@@ -20,9 +59,10 @@ def test_actual_installed_browser_walkthrough_guarded_outside_checkout(tmp_path,
     for name in ("ui_browser_walkthrough.cjs", "ui_browser_server.py"):
         shutil.copyfile(root / "tests" / name, tmp_path / name)
     output = tmp_path / "browser-evidence"
+    fixtures = saved_fixtures(tmp_path / "saved-fixtures")
     env = {**os.environ, "PYTHONPATH": "", "PYTHONDONTWRITEBYTECODE": "1",
            "TECHLENS_UI_PYTHON": os.environ["TECHLENS_INSTALLED_PYTHON"], "TECHLENS_UI_CWD": str(tmp_path),
-           "TECHLENS_CHROME": executable}
+           "TECHLENS_CHROME": executable, "TECHLENS_SAVED_FIXTURES": str(fixtures)}
     result = subprocess.run([env["TECHLENS_NODE"], str(tmp_path / "ui_browser_walkthrough.cjs"), str(output)],
                             cwd=tmp_path, env=env, capture_output=True, text=True, timeout=120)
     assert result.returncode == 0, result.stdout + result.stderr
@@ -48,6 +88,18 @@ def test_actual_installed_browser_walkthrough_guarded_outside_checkout(tmp_path,
     assert regressions["delayed-mutation-selection"]["preserved"]
     assert len(evidence["fidelity"]) == 4
     assert all(v["all_fields_and_sections"] for v in evidence["fidelity"])
+    assert len(evidence["saved_fidelity"]) == 12
+    assert all(v["all_fields_and_sections"] for v in evidence["saved_fidelity"])
+    assert evidence["saved_restart"]["zip_reopened"] and evidence["saved_restart"]["files_reopened"]
+    assert evidence["saved_restart"]["old_run_unavailable"]
+    assert receipts[1]["import_only_execution_attempts"] == 0
+    assert evidence["saved_restart"]["hostile_text_inert"]
+    assert {r["stage"] for r in evidence["saved_upload_races"]} == {"file-read", "open-response"}
+    for race in evidence["saved_upload_races"]:
+        assert race["new_selection_preserved"] and race["no_stale_view_or_message"]
+        assert race["before_explicit_B_posts"] == (0 if race["stage"] == "file-read" else 1)
+        assert race["after_explicit_B_posts"] == race["before_explicit_B_posts"] + 1
+    assert len(evidence["saved_invalid_metrics_and_failed"]) == 4
 
 
 def test_t011_initial_installed_browser_smoke(tmp_path):

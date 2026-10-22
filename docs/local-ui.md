@@ -131,3 +131,11 @@ release verification records that gate separately in its own results.
 
 Live providers, billing/pricing authority, real-model quality, T-006B, durable
 recovery and Python 3.11 execution remain **NOT VERIFIED**.
+
+## Saved report views
+
+Use **Open saved report** for a previously exported ZIP or the exact three-file
+bundle. This independent journey shows file-declared provenance without labeling
+an imported live report as a synthetic run. It grants no execution or live
+authority. Read the [integrity checks and lifecycle](saved-reports.md) before
+interpreting a saved snapshot. Markdown and source URLs remain inert.

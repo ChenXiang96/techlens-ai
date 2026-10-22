@@ -8,15 +8,16 @@
 <body>
 <header><span class="brand">TechLens <span class="badge">LOCAL · OFFLINE</span></span>
   <h1>Evidence, with its limits intact.</h1>
-  <p>Prepare an assessment request, or explore a supervised synthetic demonstration.</p>
+  <p>Prepare a request, explore a synthetic demo, or reopen a saved report read-only.</p>
 </header>
 <main>
-  <aside class="notice">SYNTHETIC DEMO — no real research or model assessment. Prices and usage are fictional.
+  <aside id="demo-notice" class="notice">SYNTHETIC DEMO — no real research or model assessment. Prices and usage are fictional.
     No browser live execution. Prepared requests are never attached to canned results.</aside>
   <p id="message" role="status" aria-live="polite"></p>
   <p id="action-status" role="status" aria-live="polite">No submission in progress.</p>
   <nav aria-label="Journeys"><button id="request-tab" aria-pressed="true">Prepare request</button>
-    <button id="demo-tab" aria-pressed="false">Explore demo</button></nav>
+    <button id="demo-tab" aria-pressed="false">Explore demo</button>
+    <button id="saved-tab" aria-pressed="false">Open saved report</button></nav>
   <section id="request-journey" aria-labelledby="request-heading">
     <h2 id="request-heading">Prepare a request</h2>
     <p>Local validation only. Defaults: USD 0, one research round, two searches. A positive budget grants no permission.
@@ -68,6 +69,33 @@
       <button id="report-toggle" aria-pressed="false">Show full report</button><div id="report-display"></div>
       <div id="downloads"></div><button id="retry-artifacts" hidden>Retry report downloads only</button>
     </section>
+  </section>
+  <section id="saved-journey" hidden aria-labelledby="saved-heading">
+    <h2 id="saved-heading">Open saved report</h2>
+    <aside class="notice">Imported saved report — read-only. File hashes and supported report structure checked.
+      Imported snapshot; origin is not authenticated. Original workflow validation and factual support were not repeated.</aside>
+    <p>Select one saved TechLens ZIP, or exactly report.json, report.md and manifest.json together.
+      Files are checked in memory, not extracted or saved. Markdown is hash-checked only, never rendered or compared for meaning.
+      Source URLs are inert text. Opening a report starts no assessment and grants no live permission.</p>
+    <form id="saved-form">
+      <label>Saved report files<input id="saved-files" type="file" multiple accept=".zip,.json,.md"></label>
+      <p class="muted">ZIP: 5 MiB maximum. Report JSON and Markdown: 2 MiB each. Manifest: 8 KiB.</p>
+      <button type="submit" class="primary">Check and open saved report</button>
+    </form>
+    <label>Opened saved reports (this process only)<select id="saved-picker"><option value="">Choose an opened saved report</option></select></label>
+    <button id="saved-refresh">Refresh opened saved reports</button>
+    <section id="saved-panel" hidden>
+      <h3 id="saved-report-heading">Imported saved report — read-only</h3>
+      <p id="saved-checks"></p>
+      <p>All provenance, mode and costs below are declared by the supplied files, not authenticated by this import.
+        Attempts mean admitted, not confirmed dispatch. Outstanding liability is estimated, not an invoice; missing values are unknown.</p>
+      <div id="saved-provenance"></div>
+      <button id="saved-toggle" aria-pressed="false">Show full saved report</button>
+      <button id="saved-close">Close saved view</button>
+      <div id="saved-display"></div>
+    </section>
+    <p class="muted">Process-only views expire after 30 idle minutes. Restart removes this list; select your files again.
+      No assessment, checkpoint, ledger or original run is restored. The server does not scan local folders.</p>
   </section>
 </main>
 <footer>Process-local only · Restart loses runs · Closing a tab neither approves nor cancels work · No automatic replay</footer>

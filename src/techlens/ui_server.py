@@ -145,16 +145,18 @@ class Handler(socketserver.BaseRequestHandler):
         if "transfer-encoding" in headers or "content-encoding" in headers:
             raise UIError("Unsupported request framing.")
         length = headers.get("content-length")
+        saved_open = method == "POST" and path == "/api/saved-reports/open"
         if method == "POST":
             if headers.get("origin") != server.origin:
                 raise UIError("Mutation requires the exact local Origin.", 403)
             if length is None or not re.fullmatch(r"[0-9]{1,9}", length):
                 raise UIError("Mutation requires a bounded Content-Length.")
-            if int(length) > 1048576:
+            if int(length) > (7 * 1024**2 if saved_open else 1048576):
                 raise UIError("JSON body exceeds the local bound.", 413)
             if headers.get("content-type") != "application/json":
                 raise UIError("Mutation requires application/json.")
-            body = decode_json(reader.body(int(length)))  # All parsing before any action.
+            if not saved_open:
+                body = decode_json(reader.body(int(length)))  # Existing route bounds unchanged.
         elif length not in {None, "0"}:
             raise UIError("GET request body is not supported.")
         cookie = SimpleCookie()
@@ -187,7 +189,23 @@ class Handler(socketserver.BaseRequestHandler):
         if not secrets.compare_digest(headers.get("x-techlens-csrf", ""), c.owners[owner].csrf):
             raise UIError("Local CSRF validation failed.", 403)
         result, data, mime, extra = None, None, "application/json", None
-        if method == "POST" and path in {"/api/requests/prepare", "/api/demos/start"}:
+        if saved_open:
+            # Owner/Origin/CSRF validated BEFORE acquiring the single large reader.
+            # Every framing/read/parser/action/verification/send failure releases it.
+            with c.saved.begin(owner) as lease:
+                body = decode_json(reader.body(int(length)))
+                result = c.saved.open(owner, body, lease)
+        elif method == "GET" and path == "/api/saved-reports":
+            result = c.saved.listing(owner)
+        elif re.fullmatch(r"/api/saved-reports/saved-[a-f0-9]{32}(?:/close)?", path):
+            key = path.split("/")[3]
+            if method == "GET" and not path.endswith("/close"):
+                result = c.saved.read(owner, key)
+            elif method == "POST" and path.endswith("/close"):
+                result = c.saved.close(owner, key, body)
+            else:
+                raise UIError("Unsupported saved report route.", 405)
+        elif method == "POST" and path in {"/api/requests/prepare", "/api/demos/start"}:
             operation = "prepare" if path.endswith("prepare") else "start"
             result = c.act(owner, operation, "owner", body)
         elif method == "GET" and re.fullmatch(r"/api/requests/[a-f0-9]{32}(?:/download)?", path):
@@ -286,6 +304,14 @@ class LocalServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     def handle_error(self, request, client_address):
         pass  # Never print tracebacks containing capabilities or supplied data.
 
+    def server_close(self):
+        # Stop publication BEFORE waiting for in-flight HTTP handlers. Closing a
+        # listener must not let an already verified upload publish an orphan.
+        with self.coordinator.lock:
+            self.coordinator.closed = True
+            self.coordinator.saved.shutdown()
+        super().server_close()
+
 
 def serve(port, env, write):
     coordinator = Coordinator(env)
@@ -305,6 +331,7 @@ def serve(port, env, write):
     finally:
         with coordinator.lock:
             coordinator.closed = True
+            coordinator.saved.shutdown()
         try:
             write("Stopping admission and waiting for admitted synthetic work; no run will be replayed.\n")
         finally:

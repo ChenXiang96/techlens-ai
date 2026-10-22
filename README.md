@@ -140,3 +140,12 @@ gates and a separate publication decision; dependency metadata is not legal clea
 See [contribution guidance](CONTRIBUTING.md), [release-note draft](docs/release-notes.md)
 and [publication gates](docs/release-checklist.md). No public support channel, security
 response promise, public registry ownership or release publication is implied.
+
+## Reopen a saved report
+
+The local browser's **Open saved report** journey accepts an explicitly selected
+TechLens ZIP or `report.json`, `report.md` and `manifest.json` together. It checks
+file hashes and supported structure, then displays a separate read-only snapshot.
+It does not authenticate origin, repeat authoritative validation, restore a run,
+or start research. Files are handled in memory; restart requires explicit reopen.
+See [saved report limits and trust scope](docs/saved-reports.md).

@@ -14,6 +14,7 @@ from techlens.presentation import PublicOutput
 from techlens.ui_artifacts import artifacts
 from techlens.ui_contracts import Action, PlanEdit, RequestForm, UIError, parse
 from techlens.ui_presentation import plan_view, plan_changes, report_view, request_view
+from techlens.ui_saved_reports import SavedViewStore
 
 
 def identifier():
@@ -63,6 +64,7 @@ class Coordinator:
         self.owners, self.runs, self.tickets = {}, {}, {}
         self.jobs = 0
         self.closed = False
+        self.saved = SavedViewStore(self)
         self.session_factory = session_factory
         self.pool = ThreadPoolExecutor(max_workers=2, thread_name_prefix="techlens-ui")
         self.schedule = scheduler or self.pool.submit
@@ -79,6 +81,7 @@ class Coordinator:
                     run.session.close()
                 del self.runs[rid]
             self.tickets = {t: v for t, v in self.tickets.items() if v.owner != key}
+            self.saved.purge_owner(key)
             del self.owners[key]
 
     def owner(self, cookie=None, *, create=False):
@@ -369,6 +372,7 @@ class Coordinator:
     def close(self):
         with self.lock:
             self.closed = True
+            self.saved.shutdown()
         # No forced preemption, graph replay, reconciliation or liability release.
         self.pool.shutdown(wait=True)
         with self.lock:

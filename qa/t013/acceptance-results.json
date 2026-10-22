@@ -1,0 +1,197 @@
+{
+  "task": "T-013",
+  "status": "MASTER_FINAL_PASS",
+  "current_revision_verification": "Final a5 frozen inputs accepted by Master on 2026-10-22; submitted test runs remain attributed to Codex",
+  "baseline_commit": "1ae6f771d824955f89aa4206e94ca578e065883d",
+  "review_artifact_version": "0.1.0",
+  "artifact_scope": "Uncommitted local review build; not the historical T-012 artifact or a published release",
+  "feature": "Explicit ZIP or three-file reopening into separate process-only read-only saved views",
+  "trust_scope": "File hashes and supported structure only; origin, factual support and original workflow authority are not authenticated",
+  "revision_scope": {
+    "findings": ["F-01", "F-02", "F-03"],
+    "changed_included_files_from_a4": [
+      "docs/saved-reports.md", "src/techlens/saved_reports.py", "src/techlens/ui_assets/app.js",
+      "tests/test_saved_reports.py", "tests/test_ui_browser_qa.py", "tests/ui_browser_walkthrough.cjs"
+    ],
+    "additional_excluded_current_evidence": "qa/t013/acceptance-results.json",
+    "store_coordinator_server_changed_from_a4": false,
+    "protected_contracts_or_dependencies_changed_from_a4": false
+  },
+  "previous_a4_submission": {
+    "codex_full": {"passed": 1048, "failed": 0, "skipped": 0},
+    "codex_focused": {"passed": 172, "failed": 0, "skipped": 0},
+    "master_socket_free_focused": {"passed": 73, "http_tests_deselected": 8},
+    "master_full_or_native_browser_rerun": false,
+    "master_decision": "REVISION REQUIRED, F-01/F-02/F-03",
+    "preserved_original_qa_record": "previous-acceptance-results-a4.json in the external a5 review directory",
+    "counts_are_not_summed_with_current_verification": true
+  },
+  "master_second_review": {
+    "date": "2026-10-22",
+    "decision": "FINAL PASS for the approved offline saved-report reopening scope",
+    "reviewed_artifact": "preview-0.1.0-a5, version 0.1.0, uncommitted local review build",
+    "findings": {"F-01": "CLOSED", "F-02": "CLOSED", "F-03": "CLOSED"},
+    "acceptance_criteria": "AC-01 through AC-16 PASS",
+    "review_text_sha256": "b3924c922bf5fca26bd6e2e62b7c00072a76979d1a548643d90f52a227de31aa",
+    "wheel_sha256": "863f9fc39a54e239d7a593593015f07393e2416a2e3eb73bde7f637163c45a2a",
+    "sdist_sha256": "42bd2c2d68685d2a893b253218abfe3692dd6bcadd5f6d93dd46420ff3acdcca",
+    "independent_checks": {
+      "focused_verifier_store": {"passed": 103, "http_tests_deselected": 8},
+      "actual_source_javascript_vm_minimal_dom": {
+        "file_read_race_posts_before_after_explicit_B": [0, 1],
+        "held_response_race_posts_before_after_explicit_B": [1, 2],
+        "actual_browser_rerun": false
+      },
+      "original_verifier_mutants": "Both reject",
+      "baseline_tracked_files_compared": 125,
+      "complete_scope": "11 modified and 6 new files; no missing files",
+      "packaged_inputs_changed_from_a4": 6,
+      "wheel_changes_from_a4": ["techlens/saved_reports.py", "techlens/ui_assets/app.js", "techlens-0.1.0.dist-info/RECORD"],
+      "frozen_source_inputs": 129,
+      "wheel_sdist_members": [54, 130],
+      "source_wheel_installed_runtime_files": 49,
+      "installed_non_record_payloads": 53,
+      "archive_installed_record_entries": [54, 59],
+      "installed_distributions": 43,
+      "before_after_installed_identity_equal": true,
+      "sdist_derived_wheel_identical": true,
+      "a4_artifacts_preserved": true,
+      "t012_artifacts_and_191_historical_files_preserved": true,
+      "evaluation_twice_equal_and_original_baselines_unchanged": true,
+      "evaluation_samples": 52
+    },
+    "inspected_not_rerun": ["Installed-browser receipts and assertions", "Native journeys", "Installation", "Full 1078-test suite"],
+    "attribution": "103 focused passes and VM checks are independent Master results. The 1078/202/91/11 runs below remain Codex results; overlapping counts must not be summed. Browser receipts were inspected, not independently replayed by Master.",
+    "closeout_scope": "Excluded QA and external current review records only; no packaged edits, repeated tests, rebuild or reinstall",
+    "publication_authorized": false,
+    "post_owner_commit_requirement": "Reconcile committed source and artifact identity before any later publication"
+  },
+  "revision_regressions": {
+    "F-01": {
+      "file_read_replacement": "A submits zero requests; B remains selected/current and requires a new explicit submission",
+      "held_actual_response": "A may finish server-side; stale completion cannot install a view/message or clear B; B adds exactly one explicit request",
+      "guards": "Selected-file generation and UI selection checked after reads, listing, response and view installation; conditional cleanup; existing double-click guard retained"
+    },
+    "F-02": {
+      "both_input_paths": "Negative float with null finish rejected after manifest rehash; fixed domain error with no cause/context",
+      "nullable_metrics": "metrics=null accepted; a metrics object requires finalized finish and elapsed values",
+      "elapsed": "Finite nonnegative numeric value, never Boolean; original timestamp relationship check retained; no invented values",
+      "zero_duration": "Valid start=finish with zero duration preserved"
+    },
+    "F-03": {
+      "both_input_paths": "Completed/comparison exports relabeled failed while retaining claims are rejected after manifest rehash",
+      "supported_failed_exports": "Unchanged authoritative assembler/exporter fixture retains observations, risks, notes and positive declared expenses with unknown analysis; nullable metrics still accepted",
+      "no_repair_or_authority_reconstruction": true
+    }
+  },
+  "verification": {
+    "final_full_frozen_offline": {"passed": 1078, "failed": 0, "skipped": 0, "seconds": 422.78},
+    "targeted": {"passed": 202, "failed": 0, "skipped": 0, "seconds": 9.32},
+    "pure_verifier_focused": {"passed": 91, "failed": 0, "skipped": 0},
+    "installed_browser_packaging_focused": {"passed": 11, "failed": 0, "skipped": 0, "seconds": 182.35},
+    "installed_packaging_native_browser_subset": {"passed": 112, "included_in_full_suite": true, "not_an_additional_run": true},
+    "installed_browser_and_identity": {
+      "artifact": "T-013 preview-0.1.0-a5, new separate disposable installation; a4 preserved",
+      "wheel_sha256": "863f9fc39a54e239d7a593593015f07393e2416a2e3eb73bde7f637163c45a2a",
+      "sdist_sha256": "42bd2c2d68685d2a893b253218abfe3692dd6bcadd5f6d93dd46420ff3acdcca",
+      "sdist_rebuilt_wheel_identical": true,
+      "installed_distributions": 43,
+      "runtime_files": 49,
+      "verified_unchanged_non_record_archive_files": 53,
+      "wheel_record_members": 54,
+      "installed_record_members": 59,
+      "python": "3.12.14",
+      "platform": "Windows",
+      "chrome": "155.0.8059.85",
+      "edge": "152.0.4191.53",
+      "saved_fidelity_scenarios_per_browser": 12,
+      "selected_file_races_per_browser": 2,
+      "invalid_elapsed_and_failed_mutants_rejected_per_browser": 4,
+      "explicit_process_restart_and_reopen": true,
+      "import_only_child_sessions_runs_execution_attempts": 0,
+      "product_child_network_provider_authorization_attempts": 0,
+      "browser_background_proxy_denials": {"chrome": 145, "edge": 91},
+      "proxy_denial_receipt_scope": "Final full-suite browser runs; separate focused runs record Chrome 146 and Edge 92",
+      "post_test_identity_equal_to_pre_test_identity": true,
+      "background_denials_are_not_product_dispatches": true
+    },
+    "evaluation_twice_and_baseline_equal": true,
+    "offline_lock_check": "PASS, 48 packages",
+    "git_diff_check": "PASS; LF-to-CRLF notices only",
+    "tracked_and_untracked_whitespace": "PASS",
+    "frozen_source_hashes_and_t012_artifact_preservation": "PASS",
+    "t012_historical_indexed_files_rechecked": 191,
+    "historical_a4_actual_former_run_id_probe": {"status": "PASS", "http_status": 404, "new_sessions": 0, "additional_pytest_count": 0},
+    "before_after_installed_verifier_probe": "a4 accepts both reported mutants in both formats; a5 rejects all four with fixed unchained errors; unchanged completed exports still accepted",
+    "a4_artifacts_and_previous_qa_record_preserved": true,
+    "included_source_inputs": 129,
+    "wheel_members": 54,
+    "sdist_members": 130,
+    "warnings": [
+      "Git emits LF-to-CRLF notices; final tracked/untracked whitespace checks pass.",
+      "Standalone evaluator emits existing LangGraph unregistered-checkpoint-type log warnings; unchanged fixture outputs still match. Saved report imports do not deserialize checkpoints."
+    ],
+    "evaluation_rebaseline": false,
+    "new_dependencies": false,
+    "provider_requests": 0,
+    "downloads": 0,
+    "commit_push_publication": false
+  },
+  "verification_history": [
+    "Sandbox denied local sockets/uv temporary cache; required checks rerun with scoped approval and offline guards.",
+    "Intermediate browser test needed an explicit asynchronous saved-list wait; corrected before final verification.",
+    "Intermediate a2 full suite: 1047 passed, 1 source-archive identity failure after documentation/test updates; final a4 rebuilt and independently installed before the final full run.",
+    "Current revision: 200 prebuild focused passes and 2 artifact gates skipped before binding new artifacts; final a5 targeted run passes all 202 without skips.",
+    "Current revision: one final a5 full frozen/offline suite, 1078 passes; no included source/docs/tests changed after the a5 build.",
+    "Submitted test runs are this task's Codex observations. The separate master_second_review records independent Master checks and limits; overlapping results are not summed. Historical T-012 evidence is not relabeled or added.",
+    "2026-10-22: Master second review FINAL PASS; F-01/F-02/F-03 CLOSED. Administrative evidence closeout only; no packaged source change, test rerun, rebuild or reinstall."
+  ],
+  "acceptance_status": {
+    "AC-01": "PASS", "AC-02": "PASS", "AC-03": "PASS", "AC-04": "PASS",
+    "AC-05": "PASS", "AC-06": "PASS", "AC-07": "PASS", "AC-08": "PASS",
+    "AC-09": "PASS", "AC-10": "PASS", "AC-11": "PASS", "AC-12": "PASS",
+    "AC-13": "PASS", "AC-14": "PASS", "AC-15": "PASS", "AC-16": "PASS"
+  },
+  "limits": {
+    "zip_bytes": 5242880,
+    "report_json_bytes": 2097152,
+    "report_markdown_bytes": 2097152,
+    "manifest_bytes": 8192,
+    "import_http_bytes": 7340032,
+    "other_http_post_bytes": 1048576,
+    "concurrent_imports": 1,
+    "views_per_owner": 2,
+    "views_global": 8,
+    "projection_bytes": 4194304,
+    "retained_bytes_per_owner": 8388608,
+    "retained_bytes_global": 33554432,
+    "saved_tickets_per_owner": 16,
+    "saved_tickets_global": 64,
+    "idle_expiry_seconds": 1800
+  },
+  "acceptance_evidence": {
+    "AC-01": "Baseline/instruction/scope audit; unchanged HEAD",
+    "AC-02": "test_actual_export_compatibility_original_values_and_both_inputs; installed browser ZIP and files",
+    "AC-03": "test_bundle_integrity_and_secret_failures; strict raw-byte manifest hashes",
+    "AC-04": "test_actual_zip_headers_ranges_decompression_and_crc, including lying expansion headers",
+    "AC-05": "Strict JSON/invariants plus negative/nonfinite/Boolean/unfinished elapsed combinations and completed-to-failed mutants, both formats",
+    "AC-06": "Unchanged exporter fixtures for completed, comparison, partial, rejected, nullable failed and failed with observations/risks/notes/expenses",
+    "AC-07": "File-declared provenance displayed separately from application-owned import limitations",
+    "AC-08": "Installed browser 12 all-field/13-section comparisons, both formats; metrics=null, zero duration and failed accounting compatibility; selection coherence",
+    "AC-09": "Actual server process stop/restart, empty saved list, explicit ZIP/files reopen; no original run restored",
+    "AC-10": "Import-only child preimport execution/network/provider/auth guards; zero execution attempts",
+    "AC-11": "test_saved_immutable_projection_namespace_owner_isolation_and_no_execution_revision",
+    "AC-12": "Existing lifecycle/replay/stale-view checks plus deterministic actual File-read and held actual open-response replacement, explicit B only and double-click suppression",
+    "AC-13": "Hostile image/script/Markdown text remains inert; no saved DOM anchors/images/scripts or provider fetches",
+    "AC-14": "Full frozen offline regression and unchanged evaluator JSON/Markdown baseline",
+    "AC-15": "New review wheel, sdist rebuild, installed runtime/RECORD/dependency identity and guarded native CLI/browser",
+    "AC-16": "English docs and precise current evidence; historical T-012 artifacts/results remain separate"
+  },
+  "unverified": [
+    "Source authenticity, factual support and Markdown/JSON semantic equivalence",
+    "Original request/evidence/ledger/workflow authority from a saved snapshot",
+    "Python 3.11 and other platforms",
+    "Real providers, pricing, invoices, actual-model quality and T-006B",
+    "Persistent recovery, publication and remote synchronization"
+  ]
+}
